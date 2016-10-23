@@ -1,0 +1,20 @@
+{
+  "name": "common-ticker",
+  "version": "0.0.1",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shanehughes3/common-ticker.git"
+  },
+  "author": "Shane Hughes",
+  "license": "GPL-2.0+",
+  "bugs": {
+    "url": "https://github.com/shanehughes3/common-ticker/issues"
+  },
+  "homepage": "https://github.com/shanehughes3/common-ticker#readme"
+}
