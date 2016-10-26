@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/shanehughes3/common-ticker/issues"
   },
-  "homepage": "https://github.com/shanehughes3/common-ticker#readme"
+  "homepage": "https://github.com/shanehughes3/common-ticker#readme",
+  "dependencies": {
+    "websocket": "^1.0.23"
+  }
 }

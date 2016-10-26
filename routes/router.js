@@ -1,4 +1,5 @@
 const url = require("url"),
+      fs = require("fs"),
       methods = require("./methods"),
       logger = require("../logger.js");
 
@@ -12,6 +13,8 @@ const HTTPMethods = {
 	const endpoint = url.parse(req.url).pathname;
 	if (endpoint === "/") {
 	    methods.renderIndex(req, res);
+	} else if (fs.existsSync("./public" + endpoint)) {
+	    methods.renderPublicFile(req, res);
 	} else {
 	    methods.render404(req, res);
 	}
