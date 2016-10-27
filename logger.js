@@ -1,6 +1,6 @@
 const url = require("url");
 
-module.exports = function(req, res) {
+exports.req = function(req, res) {
     const endpoint = url.parse(req.url).pathname,
 	  ip = req.connection.remoteAddress;
     res.on("finish", function() {
@@ -27,4 +27,15 @@ const coloredCodes = {
     501: "\x1b[31m501\x1b[0m",
     503: "\x1b[31m503\x1b[0m",
     550: "\x1b[31m550\x1b[0m"    
+}
+
+exports.socketRequest = function(req, isAccepted) {
+    const response = (isAccepted) ? "\x1b[32mAccepted\x1b[0m" :
+	  "\x1b[31mRejected\x1b[0m";
+    console.log((new Date()) + ` Connection from ${req.origin} ${response}`);
+};
+
+exports.socketClose = function(reasonCode, description) {
+    console.log((new Date()) + ` ${this.remoteAddress} disconnected - ` +
+		`${reasonCode} ${description}`);
 }

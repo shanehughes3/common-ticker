@@ -6,6 +6,7 @@ const env = process.env.NODE_ENV,
       http = require("http"),
       WebSocketServer = require("websocket").server,
       router = require("./routes/router"),
+      logger = require("./logger"),
       config = require("./config")[env];
 
 const server = http.createServer(router.handleRequest);
@@ -26,12 +27,12 @@ function originIsAllowed(origin) {
 wsServer.on("request", function(req) {
     if (!originIsAllowed(req.origin)) {
 	req.reject();
-	console.log((new Date()) + `Connection from ${req.origin} rejected`);
+	logger.socketRequest(req, false);
 	return;
     }
 
-    const connection = req.accept("test-protocol", req.origin);
-    console.log((new Date()) + `Connection from ${req.origin} accepted`);
+    const connection = req.accept("ticker", req.origin);
+    logger.socketRequest(req, true);
 
     connection.on("message", function(message) {
 	if (message.type === "utf8") {
@@ -41,7 +42,5 @@ wsServer.on("request", function(req) {
 	}
     });
 
-    connection.on("close", function(reasonCode, description) {
-	console.log((new Date()) + `${reasonCode} - ${connection.remoteAddress} disconnected - ${description}`);
-    });
+    connection.on("close", logger.socketClose.bind(connection));
 });

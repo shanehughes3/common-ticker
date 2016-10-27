@@ -3,15 +3,17 @@ const $ = document.getElementById.bind(document);
 window.addEventListener("DOMContentLoaded", setup);
 
 function setup() {
-    const socket = new WebSocket(generateWSServerURL(), "test-protocol");
-    socket.onerror = function(err) {
-	console.log(err);
-    };
-    socket.onmessage = function(message) {
-	console.log(message);
-    };
-    bindButtons(socket);
+
 }
+
+const socket = new WebSocket(generateWSServerURL(), "ticker");
+socket.onopen = () => bindSocketButtons(socket);
+socket.onerror = function(err) {
+    console.log(err);
+};
+socket.onmessage = function(message) {
+    console.log(message);
+};
 
 function generateWSServerURL() {
     const loc = window.location;
@@ -21,9 +23,21 @@ function generateWSServerURL() {
     return output;
 }
 
-function bindButtons(socket) {
-    $("submit-button").onclick = function() {
-	socket.send($("text-field").value);
-    };
+function bindSocketButtons(socket) {
+    $("submit-ticker-button").onclick = () => sendAddSymbol(socket);
 }
 
+function sendAddSymbol(socket) {
+    const payload = {
+	verb: "add",
+	symbol: $("new-ticker-field").value
+    };
+    socket.send(JSON.stringify(payload));
+}
+
+function sendDeleteSymbol(socket, symbol) {
+    const payload = {
+	verb: "delete",
+	symbol: symbol
+    };
+}
