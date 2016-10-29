@@ -45,3 +45,6 @@ exports.render500 = function(req, res) {
     res.end("500 Internal Server Error");
 };
 
+exports.api = function(req, res) {
+
+};

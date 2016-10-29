@@ -11,8 +11,8 @@ exports.handleRequest = function(req, res) {
 const HTTPMethods = {
     "GET": function(req, res) {
 	const endpoint = url.parse(req.url).pathname;
-	if (endpoint === "/") {
-	    methods.renderIndex(req, res);
+	if (routes.hasOwnProperty(endpoint)) {
+	    routes[endpoint](req, res);
 	} else if (fs.existsSync("./public" + endpoint)) {
 	    methods.renderPublicFile(req, res);
 	} else {
@@ -23,3 +23,9 @@ const HTTPMethods = {
 
     }
 };
+
+const routes = {
+    "/": methods.renderIndex,
+    "/api": methods.api
+};
+    
