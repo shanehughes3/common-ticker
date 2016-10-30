@@ -1,5 +1,8 @@
 const fs = require("fs"),
-      url = require("url");
+      url = require("url"),
+      ystocks = require("../api"),
+      Api = ystocks();
+
 
 exports.renderIndex = function(req, res) {
     fs.readFile("./views/index.html", "utf8", function(err, file) {
@@ -23,6 +26,10 @@ exports.renderPublicFile = function(req, res) {
 	    res.end(file);
 	}
     });    
+};
+
+exports.api = function(req, res) {
+
 };
 
 function getMimeType(filename) {
