@@ -5,7 +5,7 @@ const url = require("url"),
 
 exports.handleRequest = function(req, res) {
     logger.req(req, res);
-    (HTTPMethods[req.method])(req, res);
+    HTTPMethods[req.method](req, res);
 };
 
 const HTTPMethods = {

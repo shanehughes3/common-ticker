@@ -1,5 +1,6 @@
 const fs = require("fs"),
       url = require("url"),
+      querystring = require("querystring"),
       ystocks = require("../api"),
       Api = ystocks();
 
@@ -29,7 +30,21 @@ exports.renderPublicFile = function(req, res) {
 };
 
 exports.api = function(req, res) {
-
+    const query = querystring.parse(url.parse(req.url).query);
+    res.writeHead(200, {"Content-type": "application/json"});
+    if (query.symbol) {
+	Api.quote(query.symbol, function(err, data) {
+	    if (err) {
+		res.end(err);
+	    } else if (data) {
+		res.end(JSON.stringify(data));
+	    } else {
+		res.end(JSON.stringify({error: "NoResults"}));
+	    }
+	});
+    } else {
+	res.end(JSON.stringify({error: "InvalidRequest"}));
+    }
 };
 
 function getMimeType(filename) {
@@ -50,8 +65,4 @@ exports.render404 = function(req, res) {
 exports.render500 = function(req, res) {
     res.writeHead(500, {"Content-type": "text/plain"});
     res.end("500 Internal Server Error");
-};
-
-exports.api = function(req, res) {
-
 };
