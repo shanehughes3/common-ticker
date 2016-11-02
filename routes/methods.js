@@ -1,7 +1,7 @@
 const fs = require("fs"),
       url = require("url"),
       querystring = require("querystring"),
-      ystocks = require("../api"),
+      ystocks = require("ystocks"),
       Api = ystocks();
 
 
