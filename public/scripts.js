@@ -1,4 +1,5 @@
 const $ = document.getElementById.bind(document);
+let globalStocksList = [];
 
 window.addEventListener("DOMContentLoaded", setup);
 
@@ -15,7 +16,7 @@ socket.onerror = function(err) {
     console.log(err); //////////////////
 };
 socket.onmessage = function(message) {
-    console.log(message); /////////////////////
+    handleMessage(message.data);
 };
 
 function generateWSServerURL() {
@@ -39,6 +40,35 @@ function sendDeleteSymbol(symbol) {
 	verb: "delete",
 	symbol: symbol
     };
+}
+
+function handleMessage(message) {
+    message = JSON.parse(message);
+    if (message.verb == "add") {
+	addNewStock(message.symbol);
+    } else if (message.verb == "delete") {
+
+    }
+}
+
+/* STOCK LIST MANIPULATION
+ */
+
+function addNewStock(symbol) {
+    if (globalStocksList.indexOf(symbol) == -1) {
+	getFromApi(symbol, function(err, data) {
+	    console.log(err, data);
+	});
+    }
+}
+
+function getFromApi(symbol, cb) {
+    let xhr = new XMLHttpRequest();
+    xhr.addEventListener("load", () => cb(null, xhr.responseText));
+    xhr.addEventListener("error", cb);
+    xhr.addEventListener("abort", cb);
+    xhr.open("GET", `/api?symbol=${symbol}`);
+    xhr.send(null);
 }
 
 /* DISPLAY

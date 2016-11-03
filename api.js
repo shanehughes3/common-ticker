@@ -49,3 +49,9 @@ function generateHistoryParams(symbol) {
 	end: today
     }
 }
+
+exports.getCacheData = function(symbol, cb) {
+    cache.get(symbol, function(err, value) {
+	cb(err, value);
+    });
+};

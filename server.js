@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 
-process.env.NODE_ENV = process.env.NODE_ENV || "development";
-
-const env = process.env.NODE_ENV,
+const env = process.env.NODE_ENV || "development",
       http = require("http"),
       router = require("./routes/router"),
-      logger = require("./logger"),
       config = require("./config")[env],
       socket = require("./socket");
 

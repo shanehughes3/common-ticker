@@ -1,8 +1,7 @@
 const fs = require("fs"),
       url = require("url"),
       querystring = require("querystring"),
-      ystocks = require("ystocks"),
-      Api = ystocks();
+      api = require("../api");
 
 
 exports.renderIndex = function(req, res) {
@@ -33,7 +32,7 @@ exports.api = function(req, res) {
     const query = querystring.parse(url.parse(req.url).query);
     res.writeHead(200, {"Content-type": "application/json"});
     if (query.symbol) {
-	Api.quote(query.symbol, function(err, data) {
+	api.getCacheData(query.symbol, function(err, data) {
 	    if (err) {
 		res.end(err);
 	    } else if (data) {
