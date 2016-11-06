@@ -4,7 +4,7 @@ let globalStocksList = [];
 window.addEventListener("DOMContentLoaded", setup);
 
 function setup() {
-    const addSymbolBox = new NewSymbolBox();
+    const addSymbolBox = new AddFormBox();
     $("symbols-container").appendChild(addSymbolBox.drawBox());
 }
 
@@ -12,6 +12,7 @@ function setup() {
  */
 
 const socket = new WebSocket(generateWSServerURL(), "ticker");
+socket.onopen = requestUpdate;
 socket.onerror = function(err) {
     console.log(err); //////////////////
 };
@@ -27,9 +28,16 @@ function generateWSServerURL() {
     return output;
 }
 
+function requestUpdate() {
+    const payload = {
+	action: "update"
+    };
+    socket.send(JSON.stringify(payload));
+}
+
 function sendAddSymbol() {
     const payload = {
-	verb: "add",
+	action: "add",
 	symbol: $("add-symbol-field").value
     };
     socket.send(JSON.stringify(payload));
@@ -37,17 +45,20 @@ function sendAddSymbol() {
 
 function sendDeleteSymbol(symbol) {
     const payload = {
-	verb: "delete",
+	action: "delete",
 	symbol: symbol
     };
+    socket.send(JSON.stringify(payload));
 }
 
 function handleMessage(message) {
     message = JSON.parse(message);
-    if (message.verb == "add") {
+    if (message.action == "add") {
 	addNewStock(message.symbol);
-    } else if (message.verb == "delete") {
-
+    } else if (message.action == "delete") {
+	removeLocalStock(message.symbol);
+    } else if (message.action == "update") {
+	updateStockList(message.list);
     }
 }
 
@@ -57,7 +68,14 @@ function handleMessage(message) {
 function addNewStock(symbol) {
     if (globalStocksList.indexOf(symbol) == -1) {
 	getFromApi(symbol, function(err, data) {
-	    console.log(err, data);
+	    if (err) {
+		console.log(err); ////
+	    } else {
+		globalStocksList.push(symbol);
+		let box = new SymbolBox(symbol);
+		$("symbols-container").insertBefore(box.drawBox(),
+						    $("new-symbol-box"));
+	    }
 	});
     }
 }
@@ -69,6 +87,25 @@ function getFromApi(symbol, cb) {
     xhr.addEventListener("abort", cb);
     xhr.open("GET", `/api?symbol=${symbol}`);
     xhr.send(null);
+}
+
+function removeLocalStock(symbol) {
+    $(symbol).remove();
+    deleteStockFromList(symbol);
+}
+
+function deleteStockFromList(symbol) {
+    const index = globalStocksList.indexOf(symbol);
+    if (index > -1) {
+	globalStocksList.splice(index, 1);
+	deleteStockFromList(symbol);
+    }
+}
+
+function updateStockList(newList) {
+    newList.forEach(function(symbol) {
+	addNewStock(symbol);
+    });
 }
 
 /* DISPLAY
@@ -84,17 +121,37 @@ function DisplayBox() {
 
 function SymbolBox(symbol) {
     this.drawBox = function() {
-	let div = createContainer();
-	div.innerHTML =
-	    `<span>${symbol}</span>`;
+	let div = this.createContainer();
+	div.setAttribute("id", symbol);
+	div.setAttribute("class", "symbol-box");
+	div.appendChild(drawInfo());
+	div.appendChild(drawClose());
 	return div;
     };
+
+    function drawInfo() {
+	let span = document.createElement("span");
+	span.textContent = symbol;
+	return span;
+    }
+
+    function drawClose() {
+	let span = document.createElement("span");
+	span.innerHTML = "&times;";
+	span.onclick = deleteSymbol.bind(this);
+	return span;
+    }
+
+    function deleteSymbol() {
+	sendDeleteSymbol(symbol);
+    }
 }
 SymbolBox.prototype = new DisplayBox();
 
-function NewSymbolBox() {
+function AddFormBox() {
     this.drawBox = function() {
 	let div = this.createContainer();
+	div.setAttribute("id", "new-symbol-box");
 	div.appendChild(drawForm());
 	return div;
     };
@@ -119,5 +176,5 @@ function NewSymbolBox() {
 	return form;
     }
 }
-NewSymbolBox.prototype = new DisplayBox();
+AddFormBox.prototype = new DisplayBox();
 

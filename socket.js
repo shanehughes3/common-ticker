@@ -46,28 +46,51 @@ function removeConnection(connection) {
     }    
 }
 
+const messageActions = {
+    add: addSymbol,
+    delete: deleteSymbol,
+    update: updateClient
+};
+
 function handleMessage(message, connection) {
     message = JSON.parse(message);
-    if (message.verb == "add") {
-	api.add(message.symbol, function(err) {
-	    if (err) {
-		connection.sendUTF(err);
-	    } else {
-		sendToAllConnected(sanitizeAndStringifyMessage(message));
-	    }
-	});
-    } else if (message.verb == "delete") {
-	api.delete(message.symbol, function(err) {
-	    if (err) {
-		connection.sendUTF(JSON.stringify(err));
-	    } else {
-		sendToAllConnected(sanitizeAndStringifyMessage(message));
-	    }
-	});
-    } else {
-	console.log(`the message: ${message}`); /////////////
+    if (messageActions.hasOwnProperty(message.action)) {
+	messageActions[message.action](message, connection);
     }
-    
+}
+
+function addSymbol(message, connection) {
+    api.add(message.symbol, function(err) {
+	if (err) {
+	    connection.sendUTF(packError(err));
+	} else {
+	    sendToAllConnected(sanitizeAndStringifyMessage(message));
+	}
+    });
+}
+
+function deleteSymbol(message, connection) {
+    api.delete(message.symbol, function(err) {
+	if (err) {
+	    connection.sendUTF(packError(err));
+	} else {
+	    sendToAllConnected(sanitizeAndStringifyMessage(message));
+	}
+    });
+}
+
+function updateClient(message, connection) {
+    api.update(function(err, symbolList) {
+	if (err) {
+	    connection.sendUTF(packError(err));
+	} else {
+	    const payload = {
+		action: "update",
+		list: symbolList
+	    };
+	    connection.sendUTF(JSON.stringify(payload));
+	}
+    });
 }
 
 function sendToAllConnected(payload) {
@@ -78,8 +101,15 @@ function sendToAllConnected(payload) {
 
 function sanitizeAndStringifyMessage(message) {
     const cleanMessage = {
-	verb: message.verb,
+	action: message.action,
 	symbol: message.symbol
     };
     return JSON.stringify(cleanMessage);
+}
+
+function packError(err) {
+    const output = {
+	error: err.name
+    };
+    return JSON.stringify(output);
 }
