@@ -6,6 +6,8 @@ window.addEventListener("DOMContentLoaded", setup);
 function setup() {
     const addSymbolBox = new AddFormBox();
     $("symbols-container").appendChild(addSymbolBox.drawBox());
+    window.graph = new Graph();
+    graph.draw();
 }
 
 /* WEBSOCKET
@@ -38,9 +40,10 @@ function requestUpdate() {
 function sendAddSymbol() {
     const payload = {
 	action: "add",
-	symbol: $("add-symbol-field").value
+	symbol: $("add-symbol-field").value.toUpperCase()
     };
     socket.send(JSON.stringify(payload));
+    $("add-symbol-field").value = "";
 }
 
 function sendDeleteSymbol(symbol) {
@@ -71,6 +74,7 @@ function addNewStock(symbol) {
 	    if (err) {
 		console.log(err); ////
 	    } else {
+		window.graph.addData(JSON.parse(data));
 		globalStocksList.push(symbol);
 		let box = new SymbolBox(symbol);
 		$("symbols-container").insertBefore(box.drawBox(),
@@ -90,6 +94,7 @@ function getFromApi(symbol, cb) {
 }
 
 function removeLocalStock(symbol) {
+    window.graph.removeData(symbol);
     $(symbol).remove();
     deleteStockFromList(symbol);
 }
@@ -178,3 +183,94 @@ function AddFormBox() {
 }
 AddFormBox.prototype = new DisplayBox();
 
+/* GRAPH
+ */ 
+
+function Graph() {
+    let data = [];
+    
+    this.draw = function() {
+	d3.selectAll("svg > *").remove();
+	let svg = d3.select("svg");
+	const margin = {
+	    left: 30,
+	    bottom: 30,
+	    right: 30,
+	    top: 30
+	};
+	const width = svg.attr("width") - margin.left - margin.right,
+	      height = svg.attr("height") - margin.top - margin.bottom;
+	
+	const chart = svg.append("g")
+	      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+	const parseDate = d3.timeParse("%Y-%m-%d");
+
+	const x = d3.scaleTime()
+	      .domain([
+		  d3.min(data, function(stock) {
+		      return d3.min(stock, (d) => parseDate(d.Date));
+		  }),
+		  d3.max(data, function(stock) {
+		      return d3.max(stock, (d) => parseDate(d.Date));
+		  })
+	      ])
+	      .range([0, width]);
+	const y = d3.scaleLinear()
+	      .domain([d3.max(data, function(stock) {
+		  return d3.max(stock, (d) => +d.Adj_Close);
+	      }), 0])
+	      .range([0, height]);
+	const z = d3.scaleOrdinal(d3.schemeCategory10)
+	      .domain(data.map(function(stock) {
+		  return stock.map((d) => d.Symbol)
+	      }));
+
+	const line = d3.line()
+	      .curve(d3.curveBasis)
+	      .x((d) => x(parseDate(d.Date)))
+	      .y((d) => y(d.Adj_Close));
+
+	chart.append("g")
+	    .attr("class", "x-axis axis")
+	    .attr("transform", `translate(0,${height})`)
+	    .call(d3.axisBottom(x));
+
+	chart.append("g")
+	    .attr("class", "y-axis axis")
+	    .call(d3.axisLeft(y));
+	
+	let node = chart.selectAll(".node")
+	    .data(data)
+	    .enter().append("g")
+	    .attr("class", "node");
+
+	node.append("path")
+	    .attr("class", "line")
+	    .attr("d", (d) => line(d))
+	    .style("stroke", (d) => z(d.Symbol))
+	    .style("fill", "none");
+    };
+
+    this.addData = function(stockData) {
+	data.push(stockData);
+	this.draw();
+    };
+
+    this.removeData = function(symbol) {
+	const index = indexOfSymbol(symbol);
+	if (index > -1) {
+	    data.splice(index, 1);
+	    this.draw();
+	}
+    };
+
+    function indexOfSymbol(symbol) {
+	for (let i = 0; i < data.length; i++) {
+	    if (data[i][0].Symbol == symbol) {
+		return i;
+	    }
+	}
+	return -1;
+    }
+}
