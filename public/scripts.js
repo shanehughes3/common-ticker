@@ -7,7 +7,6 @@ function setup() {
     const addSymbolBox = new AddFormBox();
     $("symbols-container").appendChild(addSymbolBox.drawBox());
     window.graph = new Graph();
-    graph.draw();
 }
 
 /* WEBSOCKET
@@ -137,6 +136,8 @@ function SymbolBox(symbol) {
     function drawInfo() {
 	let span = document.createElement("span");
 	span.textContent = symbol;
+	span.setAttribute("class", "symbol-box-title");
+	span.style.color = window.graph.getStockColor(symbol);
 	return span;
     }
 
@@ -183,13 +184,22 @@ function AddFormBox() {
 }
 AddFormBox.prototype = new DisplayBox();
 
+function updateSymbolBoxColors() {
+    const elements = document.getElementsByClassName("symbol-box-title");
+    for (let i = 0; i < elements.length; i++) {
+	const symbol = elements[i].textContent;
+	elements[i].style.color = window.graph.getStockColor(symbol);
+    }
+}
+
 /* GRAPH
  */ 
 
 function Graph() {
+    const self = this;
     let data = [];
     
-    this.draw = function() {
+    function draw() {
 	d3.selectAll("svg > *").remove();
 	let svg = d3.select("svg");
 	const margin = {
@@ -221,10 +231,8 @@ function Graph() {
 		  return d3.max(stock, (d) => +d.Adj_Close);
 	      }), 0])
 	      .range([0, height]);
-	const z = d3.scaleOrdinal(d3.schemeCategory10)
-	      .domain(data.map(function(stock) {
-		  return stock.map((d) => d.Symbol)
-	      }));
+	self.getStockColor = d3.scaleOrdinal(d3.schemeCategory10)
+	      .domain(data.map((d) => d[0].Symbol));
 
 	const line = d3.line()
 	      .curve(d3.curveBasis)
@@ -248,20 +256,22 @@ function Graph() {
 	node.append("path")
 	    .attr("class", "line")
 	    .attr("d", (d) => line(d))
-	    .style("stroke", (d) => z(d.Symbol))
+	    .style("stroke", (d) => self.getStockColor(d[0].Symbol))
 	    .style("fill", "none");
+
+	updateSymbolBoxColors();
     };
 
     this.addData = function(stockData) {
 	data.push(stockData);
-	this.draw();
+	draw();
     };
 
     this.removeData = function(symbol) {
 	const index = indexOfSymbol(symbol);
 	if (index > -1) {
 	    data.splice(index, 1);
-	    this.draw();
+	    draw();
 	}
     };
 
