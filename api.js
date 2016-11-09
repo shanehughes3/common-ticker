@@ -13,18 +13,39 @@ exports.add = function(symbol, cb) {
 	e.name = "SymbolAlreadyAdded";
 	cb(e);
     } else {
-	Api.history(generateHistoryParams(symbol), function(err, data) {
-	    if (err) {
-		cb(err);
-	    } else if (data) {
-		cache.set(symbol, data);
-		cb(null);
-	    } else {
-		let e = new Error("That stock symbol returned no results");
-		e.name = "InvalidSymbol";
-		cb(e);
-	    }
+	let newSymbolObject = {};
+	const historyRetrieval = new Promise(function(resolve, reject) {
+	    Api.history(generateHistoryParams(symbol), function(err, data) {
+		if (err) {
+		    reject(err);
+		} else if (data) {
+		    newSymbolObject.history = data;
+		    resolve();
+		} else {
+		    reject("InvalidSymbol");
+		}
+	    });
 	});
+	const metaRetrieval = new Promise(function(resolve, reject) {
+	    Api.quote(symbol, function(err, data) {
+		if (err) {
+		    reject(err);
+		} else if (data) {
+		    newSymbolObject.info = data[0];
+		    resolve();
+		} else {
+		    reject("InvalidSymbol");
+		}
+	    });
+	});
+	Promise.all([historyRetrieval, metaRetrieval])
+	    .then(function() {
+		cache.set(symbol, newSymbolObject);
+		cb(null);
+	    })
+	    .catch(function(reason) {
+		cb(reason);
+	    });
     }
 };
 

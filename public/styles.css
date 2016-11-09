@@ -1,0 +1,31 @@
+
+body {
+    font-family: helvetica, sans-serif;
+}
+#page-header {
+    text-align: center;
+    font-weight: normal;
+}
+#new-symbol-box {
+    text-align: center;
+}
+#symbols-container {
+    text-align: center;
+}
+.symbol-box {
+    display: inline-block;
+    border: 1px solid black;
+    padding: 8px;
+    margin: 8px;
+    position: relative;
+}
+.symbol-box-title {
+    font-size: 2em;
+}
+.symbol-box-close {
+    position: absolute;
+    top: -2px;
+    right: 0px;
+    z-index: 100;
+    cursor: pointer;
+}

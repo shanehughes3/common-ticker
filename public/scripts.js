@@ -4,9 +4,10 @@ let globalStocksList = [];
 window.addEventListener("DOMContentLoaded", setup);
 
 function setup() {
-    const addSymbolBox = new AddFormBox();
-    $("symbols-container").appendChild(addSymbolBox.drawBox());
+    const addFormBox = new AddFormBox();
+    $("add-form-container").appendChild(addFormBox.drawBox());
     window.graph = new Graph();
+    window.graph.initialize();
 }
 
 /* WEBSOCKET
@@ -73,11 +74,11 @@ function addNewStock(symbol) {
 	    if (err) {
 		console.log(err); ////
 	    } else {
-		window.graph.addData(JSON.parse(data));
+		data = JSON.parse(data);
+		window.graph.addData(data.history);
 		globalStocksList.push(symbol);
-		let box = new SymbolBox(symbol);
-		$("symbols-container").insertBefore(box.drawBox(),
-						    $("new-symbol-box"));
+		let box = new SymbolBox(symbol, data.info);
+		$("symbols-container").appendChild(box.drawBox());
 	    }
 	});
     }
@@ -123,17 +124,18 @@ function DisplayBox() {
     }
 }
 
-function SymbolBox(symbol) {
+function SymbolBox(symbol, info) {
     this.drawBox = function() {
 	let div = this.createContainer();
 	div.setAttribute("id", symbol);
 	div.setAttribute("class", "symbol-box");
-	div.appendChild(drawInfo());
+	div.appendChild(drawTitle());
 	div.appendChild(drawClose());
+	div.appendChild(drawInfo());
 	return div;
     };
 
-    function drawInfo() {
+    function drawTitle() {
 	let span = document.createElement("span");
 	span.textContent = symbol;
 	span.setAttribute("class", "symbol-box-title");
@@ -145,7 +147,15 @@ function SymbolBox(symbol) {
 	let span = document.createElement("span");
 	span.innerHTML = "&times;";
 	span.onclick = deleteSymbol.bind(this);
+	span.setAttribute("class", "symbol-box-close");
 	return span;
+    }
+
+    function drawInfo(parentDiv) {
+	let div = document.createElement("div");
+	div.textContent = info.Name;
+	div.setAttribute("class", "symbol-company-name");
+	return div;
     }
 
     function deleteSymbol() {
@@ -208,9 +218,9 @@ function Graph() {
 	    right: 30,
 	    top: 30
 	};
-	const width = svg.attr("width") - margin.left - margin.right,
-	      height = svg.attr("height") - margin.top - margin.bottom;
-	
+	const width = $("chart").clientWidth - margin.left - margin.right,
+	      height = $("chart").clientHeight - margin.top - margin.bottom;
+
 	const chart = svg.append("g")
 	      .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -261,6 +271,10 @@ function Graph() {
 
 	updateSymbolBoxColors();
     };
+
+    this.initialize = function() {
+	draw();
+    }
 
     this.addData = function(stockData) {
 	data.push(stockData);
