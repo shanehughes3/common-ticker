@@ -8,6 +8,13 @@ function setup() {
     $("add-form-container").appendChild(addFormBox.drawBox());
     window.graph = new Graph();
     window.graph.initialize();
+    $("dialog-close-button").onclick = closeDialog;
+    $("modal-dialog").onclick = function(event) {
+	// close when clicking outside of the display window
+	if (event.target == this) {
+	    closeDialog();
+	}
+    };
 }
 
 /* WEBSOCKET
@@ -16,7 +23,7 @@ function setup() {
 const socket = new WebSocket(generateWSServerURL(), "ticker");
 socket.onopen = requestUpdate;
 socket.onerror = function(err) {
-    console.log(err); //////////////////
+    displayError("Could not connect to server. Try refreshing the page.");
 };
 socket.onmessage = function(message) {
     handleMessage(message.data);
@@ -62,6 +69,8 @@ function handleMessage(message) {
 	removeLocalStock(message.symbol);
     } else if (message.action == "update") {
 	updateStockList(message.list);
+    } else if (message.error) {
+	displayError(message.error);
     }
 }
 
@@ -72,7 +81,7 @@ function addNewStock(symbol) {
     if (globalStocksList.indexOf(symbol) == -1) {
 	getFromApi(symbol, function(err, data) {
 	    if (err) {
-		console.log(err); ////
+		displayError("Could not retrieve stock data.");
 	    } else {
 		data = JSON.parse(data);
 		window.graph.addData(data.history);
@@ -297,4 +306,18 @@ function Graph() {
 	}
 	return -1;
     }
+}
+
+/* MODAL DIALOG
+ */
+
+function displayError(error) {
+    $("dialog-message").textContent = `Error: ${error}`;
+    $("modal-dialog").style.opacity = 1;
+    $("modal-dialog").style.pointerEvents = "auto";
+}
+
+function closeDialog() {
+    $("modal-dialog").style.opacity = 0;
+    $("modal-dialog").style.pointerEvents = "none";
 }

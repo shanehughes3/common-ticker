@@ -77,7 +77,7 @@ function retrieveHistory(symbol, newSymbolObject, resolve, reject) {
 	    newSymbolObject.history = data;
 	    resolve();
 	} else {
-	    reject("InvalidSymbol");
+	    reject(returnInvalidSymbolError());
 	}
     });
 }
@@ -90,7 +90,13 @@ function retrieveInfo(symbol, newSymbolObject, resolve, reject) {
 	    newSymbolObject.info = data[0];
 	    resolve();
 	} else {
-	    reject("InvalidSymbol");
+	    reject(returnInvalidSymbolError());
 	}
     });
+}
+
+function returnInvalidSymbolError() {
+    let e = new Error("That symbol did not produce any results");
+    e.name = "InvalidSymbol";
+    return e;
 }

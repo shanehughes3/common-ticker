@@ -109,7 +109,7 @@ function sanitizeAndStringifyMessage(message) {
 
 function packError(err) {
     const output = {
-	error: err.name
+	error: err.message || err
     };
     return JSON.stringify(output);
 }
