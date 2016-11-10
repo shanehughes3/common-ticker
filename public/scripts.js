@@ -45,12 +45,15 @@ function requestUpdate() {
 }
 
 function sendAddSymbol() {
-    const payload = {
-	action: "add",
-	symbol: $("add-symbol-field").value.toUpperCase()
-    };
-    socket.send(JSON.stringify(payload));
-    $("add-symbol-field").value = "";
+    if ($("add-symbol-field").value != "") {
+	const payload = {
+	    action: "add",
+	    symbol: $("add-symbol-field").value.toUpperCase()
+	};
+	socket.send(JSON.stringify(payload));
+	$("add-symbol-field").value = "";
+	temporarilyDisableAddButton();
+    }
 }
 
 function sendDeleteSymbol(symbol) {
@@ -72,6 +75,16 @@ function handleMessage(message) {
     } else if (message.error) {
 	displayError(message.error);
     }
+}
+
+function temporarilyDisableAddButton() {
+    const button = $("submit-new-button");
+    button.onclick = null;
+    button.textContent = "Adding...";
+    window.setTimeout(function() {
+	button.onclick = sendAddSymbol;
+	button.textContent = "Add Ticker";
+    }, 2000);
 }
 
 /* STOCK LIST MANIPULATION
@@ -222,9 +235,9 @@ function Graph() {
 	d3.selectAll("svg > *").remove();
 	let svg = d3.select("svg");
 	const margin = {
-	    left: 30,
+	    left: 50,
 	    bottom: 30,
-	    right: 30,
+	    right: 50,
 	    top: 30
 	};
 	const width = $("chart").clientWidth - margin.left - margin.right,

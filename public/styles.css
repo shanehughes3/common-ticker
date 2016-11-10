@@ -1,4 +1,3 @@
-
 body {
     font-family: helvetica, sans-serif;
 }
@@ -27,6 +26,16 @@ body {
     top: -2px;
     right: 0px;
     z-index: 100;
+    cursor: pointer;
+}
+input {
+    border: 1px solid black;
+    margin: 10px;
+}
+button {
+    border: 1px solid black;
+    background-color: white;
+    margin: 10px;
     cursor: pointer;
 }
 #bottom-blurb {
