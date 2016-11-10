@@ -35,7 +35,7 @@ exports.createWSServer = function(httpServer) {
 }
 
 function originIsAllowed(origin) {
-    return true; ///////////
+    return true;
 }
 
 function removeConnection(connection) {

@@ -63,5 +63,5 @@ exports.render404 = function(req, res) {
 
 exports.render500 = function(req, res) {
     res.writeHead(500, {"Content-type": "text/plain"});
-    res.end("500 Internal Server Error");
+    res.end("500 Internal Server Error\n");
 };

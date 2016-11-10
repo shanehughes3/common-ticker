@@ -20,7 +20,7 @@ const HTTPMethods = {
 	}
     },
     "POST": function(req, res) {
-
+	methods.render404(req, res);
     }
 };
 

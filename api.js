@@ -15,30 +15,12 @@ exports.add = function(symbol, cb) {
     } else {
 	let newSymbolObject = {};
 	const historyRetrieval = new Promise(function(resolve, reject) {
-	    Api.history(generateHistoryParams(symbol), function(err, data) {
-		if (err) {
-		    reject(err);
-		} else if (data) {
-		    newSymbolObject.history = data;
-		    resolve();
-		} else {
-		    reject("InvalidSymbol");
-		}
-	    });
+	    retrieveHistory(symbol, newSymbolObject, resolve, reject);
 	});
-	const metaRetrieval = new Promise(function(resolve, reject) {
-	    Api.quote(symbol, function(err, data) {
-		if (err) {
-		    reject(err);
-		} else if (data) {
-		    newSymbolObject.info = data[0];
-		    resolve();
-		} else {
-		    reject("InvalidSymbol");
-		}
-	    });
+	const infoRetrieval = new Promise(function(resolve, reject) {
+	    retrieveInfo(symbol, newSymbolObject, resolve, reject);
 	});
-	Promise.all([historyRetrieval, metaRetrieval])
+	Promise.all([historyRetrieval, infoRetrieval])
 	    .then(function() {
 		cache.set(symbol, newSymbolObject);
 		cb(null);
@@ -87,3 +69,28 @@ function generateHistoryParams(symbol) {
     }
 }
 
+function retrieveHistory(symbol, newSymbolObject, resolve, reject) {
+    Api.history(generateHistoryParams(symbol), function(err, data) {
+	if (err) {
+	    reject(err);
+	} else if (data) {
+	    newSymbolObject.history = data;
+	    resolve();
+	} else {
+	    reject("InvalidSymbol");
+	}
+    });
+}
+
+function retrieveInfo(symbol, newSymbolObject, resolve, reject) {
+    Api.quote(symbol, function(err, data) {
+	if (err) {
+	    reject(err);
+	} else if (data) {
+	    newSymbolObject.info = data[0];
+	    resolve();
+	} else {
+	    reject("InvalidSymbol");
+	}
+    });
+}
