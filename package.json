@@ -16,6 +16,9 @@
   "bugs": {
     "url": "https://github.com/shanehughes3/common-ticker/issues"
   },
+  "engines": {
+    "node": "7.1.0"
+  },
   "homepage": "https://github.com/shanehughes3/common-ticker#readme",
   "dependencies": {
     "node-cache": "^4.1.0",
