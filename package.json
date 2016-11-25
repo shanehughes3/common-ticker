@@ -21,8 +21,9 @@
   },
   "homepage": "https://github.com/shanehughes3/common-ticker#readme",
   "dependencies": {
+    "express-scribe": "0.0.1",
     "node-cache": "^4.1.0",
     "websocket": "^1.0.23",
-    "ystocks": "0.0.3"
+    "ystocks": "^0.1.0"
   }
 }

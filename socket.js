@@ -1,5 +1,6 @@
 const WebSocketServer = require("websocket").server,
-      logger = require("./logger"),
+      Scribe = require("express-scribe"),
+      logger = new Scribe(),
       api = require("./api");
 
 let allConnections = [];

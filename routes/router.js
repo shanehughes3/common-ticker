@@ -1,7 +1,9 @@
 const url = require("url"),
       fs = require("fs"),
       methods = require("./methods"),
-      logger = require("../logger.js");
+      Scribe = require("express-scribe");
+
+logger = new Scribe({removeIPv4Prefix: true});
 
 exports.handleRequest = function(req, res) {
     logger.req(req, res);
