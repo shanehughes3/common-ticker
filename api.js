@@ -2,7 +2,7 @@ const NodeCache = require("node-cache"),
       ystocks = require("ystocks"),
       Api = ystocks();
 
-cache = new NodeCache({
+const cache = new NodeCache({
     stdTTL: 60 * 60 * 24, // 24 hours
     checkperiod: 60 * 60  // 1 hour
 });

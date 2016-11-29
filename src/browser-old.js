@@ -1,3 +1,6 @@
+const React = require("react"),
+      ReactDOM = require("react-dom");
+
 const $ = document.getElementById.bind(document);
 let globalStocksList = [];
 

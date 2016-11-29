@@ -6,7 +6,7 @@ const WebSocketServer = require("websocket").server,
 let allConnections = [];
 
 exports.createWSServer = function(httpServer) {
-    wsServer = new WebSocketServer({
+    const wsServer = new WebSocketServer({
 	httpServer: httpServer,
 	autoAcceptConnections: false
     });
