@@ -83,16 +83,27 @@ class App extends React.Component {
 	this.handleMessage = this.handleMessage.bind(this);
 	this.handleDeleteClick = this.handleDeleteClick.bind(this);
 	this.handleAddFormSubmission = this.handleAddFormSubmission.bind(this);
+	this.getStockColor = this.getStockColor.bind(this);
+	this.displayError = this.displayError.bind(this);
+	this.closeError = this.closeError.bind(this);
 	
         this.connection = new WSConnection(this.handleMessage);
 	this.connection.onError = () => this.displayError(
 	    "Error connecting to server - try refreshing the page");
 	this.connection.onMessage = this.handleMessage.bind(this);
 	this.state = {
-	    stockList: []
+	    stockList: [],
+	    error: null
 	}
+	this.colorDomain = d3.scaleOrdinal(d3.schemeCategory10)
+			     .domain(this.state.stockList.map((d) => d.symbol));
     }
-    
+
+    componentDidUpdate() {
+	this.colorDomain = d3.scaleOrdinal(d3.schemeCategory10)
+			     .domain(this.state.stockList.map((d) => d.symbol));
+    }
+        
     handleMessage(message) {
 	message = JSON.parse(message);
         if (message.action == "add") {
@@ -143,7 +154,6 @@ class App extends React.Component {
 
     handleAddFormSubmission(symbol) {
 	this.connection.sendAddSymbol(symbol);
-	/////////// TODO temporarily disable button 
     }
 
     handleDeleteClick(symbol) {
@@ -151,21 +161,32 @@ class App extends React.Component {
     }
 
     displayError(err) {
-	console.log("Display error: ", err);	//////////
+	this.setState({ error: err });
+    }
+
+    closeError() {
+	this.setState({ error: null });
+    }
+
+    getStockColor(symbol) {
+	return this.colorDomain(symbol);
     }
 
     render() {
 	const symbolBoxes = this.state.stockList.map((stock) =>
 	    <SymbolBox stock={stock} key={stock.symbol}
-		       handleClick={this.handleDeleteClick}/>
+		       handleClick={this.handleDeleteClick}
+		       color={this.getStockColor(stock.symbol)} />
 	);
         return (
             <div>
-                <GraphContainer stocks={this.state.stockList} />
+                <GraphContainer stocks={this.state.stockList}
+				getStockColor={this.getStockColor}/>
                 <AddForm handleClick={this.handleAddFormSubmission} />
                 <div id="symbols-container">
                     {symbolBoxes}
                 </div>
+		<ErrorDialog error={this.state.error} close={this.closeError} />
             </div>
         )
     }
@@ -177,11 +198,16 @@ class AddForm extends React.Component {
 	this.handleClick = this.handleClick.bind(this);
 	this.handleChange = this.handleChange.bind(this);
 	this.state = {
-	    symbol: ""
+	    symbol: "",
+	    requestTimeout: false
 	}
     }
     handleClick() {
-	this.props.handleClick(this.state.symbol);
+	if (this.state.requestTimeout == false) {
+	    this.props.handleClick(this.state.symbol);
+	    this.setState({ requestTimeout: true });
+	    setTimeout(() => this.setState({ requestTimeout: false }), 2000);
+	}
     }
     handleChange(e) {
 	this.setState({
@@ -196,7 +222,8 @@ class AddForm extends React.Component {
 			   placeholder="symbol" value={this.state.symbol}
 			   onChange={this.handleChange}/>
                     <button id="submit-new-button" onClick={this.handleClick}>
-			Add Ticker
+			{(this.state.requestTimeout) ?
+			 "Adding..." : "Add Ticker"}
 		    </button>
                 </form>
             </div>
@@ -216,7 +243,10 @@ class SymbolBox extends React.Component {
 	const stock = this.props.stock;
 	return (
 	    <div className="symbol-box">
-		<span className="symbol-box-title">{stock.symbol}</span>
+		<span className="symbol-box-title"
+		      style={{color: this.props.color}}>
+		    {stock.symbol}
+		</span>
 		<span className="symbol-box-close" onClick={this.handleClick}>
 		    &times;
 		</span>
@@ -225,6 +255,39 @@ class SymbolBox extends React.Component {
 		</div>
 	    </div>
 	)
+    }
+}
+
+class ErrorDialog extends React.Component {
+    constructor(props) {
+	super(props);
+	this.handleDialogClick = this.handleDialogClick.bind(this);
+    }
+    handleDialogClick(e) { // close only when clicking outside the dialog
+	if (e.target == $("modal-dialog")) {
+	    this.props.close();
+	}
+    }
+    render() {
+	const styles = {};
+	if (this.props.error) {
+	    styles.opacity = 1;
+	    styles.pointerEvents = "auto";
+	} else {
+	    styles.opacity = 0;
+	    styles.pointerEvents = "none";
+	}
+	return (
+	    <div id="modal-dialog" style={styles}
+		 onClick={this.handleDialogClick}>
+		<div onClick={void(0)}>
+		    <div id="dialog-close-button" onClick={this.props.close}>
+			&times;
+		    </div>
+		    <div id="dialog-message">{this.props.error}</div>
+		</div>
+	    </div>
+	);
     }
 }
 
@@ -252,7 +315,7 @@ class Graph {
 			       `translate(${margin.left},${margin.top})`);
     }
 
-    update(stocks) {
+    update(stocks, colorFunc) {
 	d3.selectAll("svg > g > *").remove();
 	
 	const parseDate = d3.timeParse("%Y-%m-%d");
@@ -276,9 +339,6 @@ class Graph {
 		    }), 0])
 		    .range([0, this.height]);
 	
-	const getStockColor = d3.scaleOrdinal(d3.schemeCategory10)
-			       .domain(stocks.map((d) => d.symbol));
-
 	const line = d3.line()
 		       .curve(d3.curveBasis)
 		       .x((d) => x(parseDate(d.Date)))
@@ -301,7 +361,7 @@ class Graph {
 	node.append("path")
 	    .attr("class", "line")
 	    .attr("d", (d) => line(d.history))
-	    .style("stroke", (d) => getStockColor(d.symbol))
+	    .style("stroke", (d) => colorFunc(d.symbol))
 	    .style("fill", "none");
 
     }
@@ -313,10 +373,10 @@ class GraphContainer extends React.Component {
     }
     componentDidMount() {
 	this.graph = new Graph(ReactDOM.findDOMNode(this));
-	this.graph.update(this.props.stocks);
+	this.graph.update(this.props.stocks, this.props.getStockColor);
     }
     componentDidUpdate() {
-	this.graph.update(this.props.stocks);
+	this.graph.update(this.props.stocks, this.props.getStockColor);
     }
     render() {
 	return <div></div>;

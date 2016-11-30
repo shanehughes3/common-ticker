@@ -20389,6 +20389,9 @@ var App = function (_React$Component) {
 								_this.handleMessage = _this.handleMessage.bind(_this);
 								_this.handleDeleteClick = _this.handleDeleteClick.bind(_this);
 								_this.handleAddFormSubmission = _this.handleAddFormSubmission.bind(_this);
+								_this.getStockColor = _this.getStockColor.bind(_this);
+								_this.displayError = _this.displayError.bind(_this);
+								_this.closeError = _this.closeError.bind(_this);
 
 								_this.connection = new WSConnection(_this.handleMessage);
 								_this.connection.onError = function () {
@@ -20396,12 +20399,23 @@ var App = function (_React$Component) {
 								};
 								_this.connection.onMessage = _this.handleMessage.bind(_this);
 								_this.state = {
-												stockList: []
+												stockList: [],
+												error: null
 								};
+								_this.colorDomain = d3.scaleOrdinal(d3.schemeCategory10).domain(_this.state.stockList.map(function (d) {
+												return d.symbol;
+								}));
 								return _this;
 				}
 
 				_createClass(App, [{
+								key: "componentDidUpdate",
+								value: function componentDidUpdate() {
+												this.colorDomain = d3.scaleOrdinal(d3.schemeCategory10).domain(this.state.stockList.map(function (d) {
+																return d.symbol;
+												}));
+								}
+				}, {
 								key: "handleMessage",
 								value: function handleMessage(message) {
 												message = JSON.parse(message);
@@ -20468,7 +20482,6 @@ var App = function (_React$Component) {
 								key: "handleAddFormSubmission",
 								value: function handleAddFormSubmission(symbol) {
 												this.connection.sendAddSymbol(symbol);
-												/////////// TODO temporarily disable button 
 								}
 				}, {
 								key: "handleDeleteClick",
@@ -20478,7 +20491,17 @@ var App = function (_React$Component) {
 				}, {
 								key: "displayError",
 								value: function displayError(err) {
-												console.log("Display error: ", err); //////////
+												this.setState({ error: err });
+								}
+				}, {
+								key: "closeError",
+								value: function closeError() {
+												this.setState({ error: null });
+								}
+				}, {
+								key: "getStockColor",
+								value: function getStockColor(symbol) {
+												return this.colorDomain(symbol);
 								}
 				}, {
 								key: "render",
@@ -20487,18 +20510,21 @@ var App = function (_React$Component) {
 
 												var symbolBoxes = this.state.stockList.map(function (stock) {
 																return React.createElement(SymbolBox, { stock: stock, key: stock.symbol,
-																				handleClick: _this4.handleDeleteClick });
+																				handleClick: _this4.handleDeleteClick,
+																				color: _this4.getStockColor(stock.symbol) });
 												});
 												return React.createElement(
 																"div",
 																null,
-																React.createElement(GraphContainer, { stocks: this.state.stockList }),
+																React.createElement(GraphContainer, { stocks: this.state.stockList,
+																				getStockColor: this.getStockColor }),
 																React.createElement(AddForm, { handleClick: this.handleAddFormSubmission }),
 																React.createElement(
 																				"div",
 																				{ id: "symbols-container" },
 																				symbolBoxes
-																)
+																),
+																React.createElement(ErrorDialog, { error: this.state.error, close: this.closeError })
 												);
 								}
 				}]);
@@ -20517,7 +20543,8 @@ var AddForm = function (_React$Component2) {
 								_this5.handleClick = _this5.handleClick.bind(_this5);
 								_this5.handleChange = _this5.handleChange.bind(_this5);
 								_this5.state = {
-												symbol: ""
+												symbol: "",
+												requestTimeout: false
 								};
 								return _this5;
 				}
@@ -20525,7 +20552,15 @@ var AddForm = function (_React$Component2) {
 				_createClass(AddForm, [{
 								key: "handleClick",
 								value: function handleClick() {
-												this.props.handleClick(this.state.symbol);
+												var _this6 = this;
+
+												if (this.state.requestTimeout == false) {
+																this.props.handleClick(this.state.symbol);
+																this.setState({ requestTimeout: true });
+																setTimeout(function () {
+																				return _this6.setState({ requestTimeout: false });
+																}, 2000);
+												}
 								}
 				}, {
 								key: "handleChange",
@@ -20549,7 +20584,7 @@ var AddForm = function (_React$Component2) {
 																				React.createElement(
 																								"button",
 																								{ id: "submit-new-button", onClick: this.handleClick },
-																								"Add Ticker"
+																								this.state.requestTimeout ? "Adding..." : "Add Ticker"
 																				)
 																)
 												);
@@ -20565,10 +20600,10 @@ var SymbolBox = function (_React$Component3) {
 				function SymbolBox(props) {
 								_classCallCheck(this, SymbolBox);
 
-								var _this6 = _possibleConstructorReturn(this, (SymbolBox.__proto__ || Object.getPrototypeOf(SymbolBox)).call(this, props));
+								var _this7 = _possibleConstructorReturn(this, (SymbolBox.__proto__ || Object.getPrototypeOf(SymbolBox)).call(this, props));
 
-								_this6.handleClick = _this6.handleClick.bind(_this6);
-								return _this6;
+								_this7.handleClick = _this7.handleClick.bind(_this7);
+								return _this7;
 				}
 
 				_createClass(SymbolBox, [{
@@ -20585,7 +20620,8 @@ var SymbolBox = function (_React$Component3) {
 																{ className: "symbol-box" },
 																React.createElement(
 																				"span",
-																				{ className: "symbol-box-title" },
+																				{ className: "symbol-box-title",
+																								style: { color: this.props.color } },
 																				stock.symbol
 																),
 																React.createElement(
@@ -20603,6 +20639,62 @@ var SymbolBox = function (_React$Component3) {
 				}]);
 
 				return SymbolBox;
+}(React.Component);
+
+var ErrorDialog = function (_React$Component4) {
+				_inherits(ErrorDialog, _React$Component4);
+
+				function ErrorDialog(props) {
+								_classCallCheck(this, ErrorDialog);
+
+								var _this8 = _possibleConstructorReturn(this, (ErrorDialog.__proto__ || Object.getPrototypeOf(ErrorDialog)).call(this, props));
+
+								_this8.handleDialogClick = _this8.handleDialogClick.bind(_this8);
+								return _this8;
+				}
+
+				_createClass(ErrorDialog, [{
+								key: "handleDialogClick",
+								value: function handleDialogClick(e) {
+												// close only when clicking outside the dialog
+												if (e.target == $("modal-dialog")) {
+																this.props.close();
+												}
+								}
+				}, {
+								key: "render",
+								value: function render() {
+												var styles = {};
+												if (this.props.error) {
+																styles.opacity = 1;
+																styles.pointerEvents = "auto";
+												} else {
+																styles.opacity = 0;
+																styles.pointerEvents = "none";
+												}
+												return React.createElement(
+																"div",
+																{ id: "modal-dialog", style: styles,
+																				onClick: this.handleDialogClick },
+																React.createElement(
+																				"div",
+																				{ onClick: void 0 },
+																				React.createElement(
+																								"div",
+																								{ id: "dialog-close-button", onClick: this.props.close },
+																								"\xD7"
+																				),
+																				React.createElement(
+																								"div",
+																								{ id: "dialog-message" },
+																								this.props.error
+																				)
+																)
+												);
+								}
+				}]);
+
+				return ErrorDialog;
 }(React.Component);
 
 /* GRAPH
@@ -20628,7 +20720,7 @@ var Graph = function () {
 
 				_createClass(Graph, [{
 								key: "update",
-								value: function update(stocks) {
+								value: function update(stocks, colorFunc) {
 												d3.selectAll("svg > g > *").remove();
 
 												var parseDate = d3.timeParse("%Y-%m-%d");
@@ -20651,10 +20743,6 @@ var Graph = function () {
 																});
 												}), 0]).range([0, this.height]);
 
-												var getStockColor = d3.scaleOrdinal(d3.schemeCategory10).domain(stocks.map(function (d) {
-																return d.symbol;
-												}));
-
 												var line = d3.line().curve(d3.curveBasis).x(function (d) {
 																return x(parseDate(d.Date));
 												}).y(function (d) {
@@ -20670,7 +20758,7 @@ var Graph = function () {
 												node.append("path").attr("class", "line").attr("d", function (d) {
 																return line(d.history);
 												}).style("stroke", function (d) {
-																return getStockColor(d.symbol);
+																return colorFunc(d.symbol);
 												}).style("fill", "none");
 								}
 				}]);
@@ -20678,8 +20766,8 @@ var Graph = function () {
 				return Graph;
 }();
 
-var GraphContainer = function (_React$Component4) {
-				_inherits(GraphContainer, _React$Component4);
+var GraphContainer = function (_React$Component5) {
+				_inherits(GraphContainer, _React$Component5);
 
 				function GraphContainer(props) {
 								_classCallCheck(this, GraphContainer);
@@ -20691,12 +20779,12 @@ var GraphContainer = function (_React$Component4) {
 								key: "componentDidMount",
 								value: function componentDidMount() {
 												this.graph = new Graph(ReactDOM.findDOMNode(this));
-												this.graph.update(this.props.stocks);
+												this.graph.update(this.props.stocks, this.props.getStockColor);
 								}
 				}, {
 								key: "componentDidUpdate",
 								value: function componentDidUpdate() {
-												this.graph.update(this.props.stocks);
+												this.graph.update(this.props.stocks, this.props.getStockColor);
 								}
 				}, {
 								key: "render",
