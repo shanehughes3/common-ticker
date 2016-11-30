@@ -20266,344 +20266,455 @@ module.exports = traverseAllChildren;
 module.exports = require('./lib/React');
 
 },{"./lib/React":154}],177:[function(require,module,exports){
-const React = require("react"),
-      ReactDOM = require("react-dom");
+"use strict";
 
-const $ = document.getElementById.bind(document);
-let globalStocksList = [];
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-window.addEventListener("DOMContentLoaded", setup);
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-function setup() {
-    const addFormBox = new AddFormBox();
-    $("add-form-container").appendChild(addFormBox.drawBox());
-    window.graph = new Graph();
-    window.graph.initialize();
-    $("dialog-close-button").onclick = closeDialog;
-    $("modal-dialog").onclick = function(event) {
-	// close when clicking outside of the display window
-	if (event.target == this) {
-	    closeDialog();
-	}
-    };
-}
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var React = require("react"),
+    ReactDOM = require("react-dom");
+
+var $ = document.getElementById.bind(document);
 
 /* WEBSOCKET
  */
 
-const socket = new WebSocket(generateWSServerURL(), "ticker");
-socket.onopen = requestUpdate;
-socket.onerror = function(err) {
-    displayError("Could not connect to server. Try refreshing the page.");
-};
-socket.onmessage = function(message) {
-    handleMessage(message.data);
-};
+var WSConnection = function () {
+				function WSConnection() {
+								_classCallCheck(this, WSConnection);
 
-function generateWSServerURL() {
-    const loc = window.location;
-    let output;
-    output = (loc.protocol == "https:") ? "wss:" : "ws:";
-    output += "//" + loc.host;
-    return output;
-}
+								this.socket = new WebSocket(this.generateWSServerURL(), "ticker");
+								this.socket.onopen = this.requestUpdate.bind(this);
+				}
 
-function requestUpdate() {
-    const payload = {
-	action: "update"
-    };
-    socket.send(JSON.stringify(payload));
-}
+				_createClass(WSConnection, [{
+								key: "generateWSServerURL",
+								value: function generateWSServerURL() {
+												var loc = window.location;
+												var output = void 0;
+												output = loc.protocol == "https:" ? "wss:" : "ws:";
+												output += "//" + loc.host;
+												return output;
+								}
+				}, {
+								key: "requestUpdate",
+								value: function requestUpdate() {
+												var payload = {
+																action: "update"
+												};
+												this.socket.send(JSON.stringify(payload));
+								}
+				}, {
+								key: "sendAddSymbol",
+								value: function sendAddSymbol(symbol) {
+												var payload = {
+																action: "add",
+																symbol: symbol.toUpperCase()
+												};
+												this.socket.send(JSON.stringify(payload));
+								}
+				}, {
+								key: "sendDeleteSymbol",
+								value: function sendDeleteSymbol(symbol) {
+												var payload = {
+																action: "delete",
+																symbol: symbol
+												};
+												this.socket.send(JSON.stringify(payload));
+								}
+				}, {
+								key: "handleMessage",
+								value: function handleMessage(message) {
+												message = JSON.parse(message);
+												this.callback(message);
+								}
+				}, {
+								key: "onError",
+								set: function set(errFunction) {
+												this.socket.onerror = errFunction;
+								}
+				}, {
+								key: "onMessage",
+								set: function set(msgFunction) {
+												this.socket.onmessage = function (message) {
+																return msgFunction(message.data);
+												};
+								}
+				}]);
 
-function sendAddSymbol() {
-    if ($("add-symbol-field").value != "") {
-	const payload = {
-	    action: "add",
-	    symbol: $("add-symbol-field").value.toUpperCase()
-	};
-	socket.send(JSON.stringify(payload));
-	$("add-symbol-field").value = "";
-	temporarilyDisableAddButton();
-    }
-}
+				return WSConnection;
+}();
 
-function sendDeleteSymbol(symbol) {
-    const payload = {
-	action: "delete",
-	symbol: symbol
-    };
-    socket.send(JSON.stringify(payload));
-}
-
-function handleMessage(message) {
-    message = JSON.parse(message);
-    if (message.action == "add") {
-	addNewStock(message.symbol);
-    } else if (message.action == "delete") {
-	removeLocalStock(message.symbol);
-    } else if (message.action == "update") {
-	updateStockList(message.list);
-    } else if (message.error) {
-	displayError(message.error);
-    }
-}
-
-function temporarilyDisableAddButton() {
-    const button = $("submit-new-button");
-    button.onclick = null;
-    button.textContent = "Adding...";
-    window.setTimeout(function() {
-	button.onclick = sendAddSymbol;
-	button.textContent = "Add Ticker";
-    }, 2000);
-}
-
-/* STOCK LIST MANIPULATION
+/* STOCK DATA API
  */
 
-function addNewStock(symbol) {
-    if (globalStocksList.indexOf(symbol) == -1) {
-	getFromApi(symbol, function(err, data) {
-	    if (err) {
-		displayError("Could not retrieve stock data.");
-	    } else {
-		data = JSON.parse(data);
-		window.graph.addData(data.history);
-		globalStocksList.push(symbol);
-		let box = new SymbolBox(symbol, data.info);
-		$("symbols-container").appendChild(box.drawBox());
-	    }
-	});
-    }
-}
+var StockDataApi = function () {
+				function StockDataApi() {
+								_classCallCheck(this, StockDataApi);
+				}
 
-function getFromApi(symbol, cb) {
-    let xhr = new XMLHttpRequest();
-    xhr.addEventListener("load", () => cb(null, xhr.responseText));
-    xhr.addEventListener("error", cb);
-    xhr.addEventListener("abort", cb);
-    xhr.open("GET", `/api?symbol=${symbol}`);
-    xhr.send(null);
-}
+				_createClass(StockDataApi, null, [{
+								key: "req",
+								value: function req(symbol, cb) {
+												var xhr = new XMLHttpRequest();
+												xhr.addEventListener("load", function () {
+																return cb(null, xhr.responseText);
+												});
+												xhr.addEventListener("error", cb);
+												xhr.addEventListener("abort", cb);
+												xhr.open("GET", "/api?symbol=" + symbol);
+												xhr.send(null);
+								}
+				}]);
 
-function removeLocalStock(symbol) {
-    window.graph.removeData(symbol);
-    $(symbol).remove();
-    deleteStockFromList(symbol);
-}
-
-function deleteStockFromList(symbol) {
-    const index = globalStocksList.indexOf(symbol);
-    if (index > -1) {
-	globalStocksList.splice(index, 1);
-	deleteStockFromList(symbol);
-    }
-}
-
-function updateStockList(newList) {
-    newList.forEach(function(symbol) {
-	addNewStock(symbol);
-    });
-}
+				return StockDataApi;
+}();
 
 /* DISPLAY
  */
 
-function DisplayBox() {
-    this.createContainer = function() {
-	let div = document.createElement("div");
-	div.setAttribute("class", "display-box");
-	return div;
-    }
-}
+var App = function (_React$Component) {
+				_inherits(App, _React$Component);
 
-function SymbolBox(symbol, info) {
-    this.drawBox = function() {
-	let div = this.createContainer();
-	div.setAttribute("id", symbol);
-	div.setAttribute("class", "symbol-box");
-	div.appendChild(drawTitle());
-	div.appendChild(drawClose());
-	div.appendChild(drawInfo());
-	return div;
-    };
+				function App() {
+								_classCallCheck(this, App);
 
-    function drawTitle() {
-	let span = document.createElement("span");
-	span.textContent = symbol;
-	span.setAttribute("class", "symbol-box-title");
-	span.style.color = window.graph.getStockColor(symbol);
-	return span;
-    }
+								var _this = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this));
 
-    function drawClose() {
-	let span = document.createElement("span");
-	span.innerHTML = "&times;";
-	span.onclick = deleteSymbol.bind(this);
-	span.setAttribute("class", "symbol-box-close");
-	return span;
-    }
+								_this.handleMessage = _this.handleMessage.bind(_this);
+								_this.handleDeleteClick = _this.handleDeleteClick.bind(_this);
+								_this.handleAddFormSubmission = _this.handleAddFormSubmission.bind(_this);
 
-    function drawInfo(parentDiv) {
-	let div = document.createElement("div");
-	div.textContent = info.Name;
-	div.setAttribute("class", "symbol-company-name");
-	return div;
-    }
+								_this.connection = new WSConnection(_this.handleMessage);
+								_this.connection.onError = function () {
+												return _this.displayError("Error connecting to server - try refreshing the page");
+								};
+								_this.connection.onMessage = _this.handleMessage.bind(_this);
+								_this.state = {
+												stockList: []
+								};
+								return _this;
+				}
 
-    function deleteSymbol() {
-	sendDeleteSymbol(symbol);
-    }
-}
-SymbolBox.prototype = new DisplayBox();
+				_createClass(App, [{
+								key: "handleMessage",
+								value: function handleMessage(message) {
+												message = JSON.parse(message);
+												if (message.action == "add") {
+																this.addNewStock(message.symbol);
+												} else if (message.action == "delete") {
+																this.removeLocalStock(message.symbol);
+												} else if (message.action == "update") {
+																this.updateStockList(message.list);
+												} else if (message.error) {
+																this.displayError(message.error);
+												}
+								}
+				}, {
+								key: "addNewStock",
+								value: function addNewStock(symbol) {
+												var _this2 = this;
 
-function AddFormBox() {
-    this.drawBox = function() {
-	let div = this.createContainer();
-	div.setAttribute("id", "new-symbol-box");
-	div.appendChild(drawForm());
-	return div;
-    };
+												if (this.state.stockList.findIndex(function (d) {
+																return (// prevent duplicates
+																				d.symbol == symbol
+																);
+												}) == -1) {
+																StockDataApi.req(symbol, function (err, data) {
+																				if (err) {
+																								_this2.displayError("Could not get data for " + symbol);
+																				} else {
+																								data = JSON.parse(data);
+																								var stockList = _this2.state.stockList.slice();
+																								stockList.push({
+																												symbol: symbol,
+																												history: data.history,
+																												info: data.info
+																								});
+																								_this2.setState({
+																												stockList: stockList
+																								});
+																				}
+																});
+												}
+								}
+				}, {
+								key: "removeLocalStock",
+								value: function removeLocalStock(symbol) {
+												var stockList = this.state.stockList.slice();
+												var index = stockList.findIndex(function (d) {
+																return d.symbol == symbol;
+												});
+												stockList.splice(index, 1);
+												this.setState({
+																stockList: stockList
+												});
+								}
+				}, {
+								key: "updateStockList",
+								value: function updateStockList(list) {
+												var _this3 = this;
 
-    function drawForm() {
-	let form = document.createElement("form");
-	form.setAttribute("action", "javascript:void(0)");
+												list.forEach(function (symbol) {
+																return _this3.addNewStock(symbol);
+												});
+								}
+				}, {
+								key: "handleAddFormSubmission",
+								value: function handleAddFormSubmission(symbol) {
+												this.connection.sendAddSymbol(symbol);
+												/////////// TODO temporarily disable button 
+								}
+				}, {
+								key: "handleDeleteClick",
+								value: function handleDeleteClick(symbol) {
+												this.connection.sendDeleteSymbol(symbol);
+								}
+				}, {
+								key: "displayError",
+								value: function displayError(err) {
+												console.log("Display error: ", err); //////////
+								}
+				}, {
+								key: "render",
+								value: function render() {
+												var _this4 = this;
 
-	let textInput = document.createElement("input");
-	textInput.setAttribute("type", "text");
-	textInput.setAttribute("id", "add-symbol-field");
-	textInput.setAttribute("placeholder", "Symbol");
+												var symbolBoxes = this.state.stockList.map(function (stock) {
+																return React.createElement(SymbolBox, { stock: stock, key: stock.symbol,
+																				handleClick: _this4.handleDeleteClick });
+												});
+												return React.createElement(
+																"div",
+																null,
+																React.createElement(GraphContainer, { stocks: this.state.stockList }),
+																React.createElement(AddForm, { handleClick: this.handleAddFormSubmission }),
+																React.createElement(
+																				"div",
+																				{ id: "symbols-container" },
+																				symbolBoxes
+																)
+												);
+								}
+				}]);
 
-	let submitButton = document.createElement("button");
-	submitButton.setAttribute("id", "submit-new-button");
-	submitButton.textContent = "Add Ticker";
-	submitButton.onclick = sendAddSymbol;
+				return App;
+}(React.Component);
 
-	form.appendChild(textInput);
-	form.appendChild(submitButton);
+var AddForm = function (_React$Component2) {
+				_inherits(AddForm, _React$Component2);
 
-	return form;
-    }
-}
-AddFormBox.prototype = new DisplayBox();
+				function AddForm(props) {
+								_classCallCheck(this, AddForm);
 
-function updateSymbolBoxColors() {
-    const elements = document.getElementsByClassName("symbol-box-title");
-    for (let i = 0; i < elements.length; i++) {
-	const symbol = elements[i].textContent;
-	elements[i].style.color = window.graph.getStockColor(symbol);
-    }
-}
+								var _this5 = _possibleConstructorReturn(this, (AddForm.__proto__ || Object.getPrototypeOf(AddForm)).call(this, props));
+
+								_this5.handleClick = _this5.handleClick.bind(_this5);
+								_this5.handleChange = _this5.handleChange.bind(_this5);
+								_this5.state = {
+												symbol: ""
+								};
+								return _this5;
+				}
+
+				_createClass(AddForm, [{
+								key: "handleClick",
+								value: function handleClick() {
+												this.props.handleClick(this.state.symbol);
+								}
+				}, {
+								key: "handleChange",
+								value: function handleChange(e) {
+												this.setState({
+																symbol: e.target.value
+												});
+								}
+				}, {
+								key: "render",
+								value: function render() {
+												return React.createElement(
+																"div",
+																{ id: "new-symbol-box" },
+																React.createElement(
+																				"form",
+																				{ action: "javascript:void(0)" },
+																				React.createElement("input", { type: "text", id: "add-symbol-field",
+																								placeholder: "symbol", value: this.state.symbol,
+																								onChange: this.handleChange }),
+																				React.createElement(
+																								"button",
+																								{ id: "submit-new-button", onClick: this.handleClick },
+																								"Add Ticker"
+																				)
+																)
+												);
+								}
+				}]);
+
+				return AddForm;
+}(React.Component);
+
+var SymbolBox = function (_React$Component3) {
+				_inherits(SymbolBox, _React$Component3);
+
+				function SymbolBox(props) {
+								_classCallCheck(this, SymbolBox);
+
+								var _this6 = _possibleConstructorReturn(this, (SymbolBox.__proto__ || Object.getPrototypeOf(SymbolBox)).call(this, props));
+
+								_this6.handleClick = _this6.handleClick.bind(_this6);
+								return _this6;
+				}
+
+				_createClass(SymbolBox, [{
+								key: "handleClick",
+								value: function handleClick() {
+												this.props.handleClick(this.props.stock.symbol);
+								}
+				}, {
+								key: "render",
+								value: function render() {
+												var stock = this.props.stock;
+												return React.createElement(
+																"div",
+																{ className: "symbol-box" },
+																React.createElement(
+																				"span",
+																				{ className: "symbol-box-title" },
+																				stock.symbol
+																),
+																React.createElement(
+																				"span",
+																				{ className: "symbol-box-close", onClick: this.handleClick },
+																				"\xD7"
+																),
+																React.createElement(
+																				"div",
+																				{ className: "symbol-company-name" },
+																				stock.info.Name
+																)
+												);
+								}
+				}]);
+
+				return SymbolBox;
+}(React.Component);
 
 /* GRAPH
- */ 
-
-function Graph() {
-    const self = this;
-    let data = [];
-    
-    function draw() {
-	d3.selectAll("svg > *").remove();
-	let svg = d3.select("svg");
-	const margin = {
-	    left: 50,
-	    bottom: 30,
-	    right: 50,
-	    top: 30
-	};
-	const width = $("chart").clientWidth - margin.left - margin.right,
-	      height = $("chart").clientHeight - margin.top - margin.bottom;
-
-	const chart = svg.append("g")
-	      .attr("transform", `translate(${margin.left},${margin.top})`);
-
-	const parseDate = d3.timeParse("%Y-%m-%d");
-
-	const x = d3.scaleTime()
-	      .domain([
-		  d3.min(data, function(stock) {
-		      return d3.min(stock, (d) => parseDate(d.Date));
-		  }),
-		  d3.max(data, function(stock) {
-		      return d3.max(stock, (d) => parseDate(d.Date));
-		  })
-	      ])
-	      .range([0, width]);
-	const y = d3.scaleLinear()
-	      .domain([d3.max(data, function(stock) {
-		  return d3.max(stock, (d) => +d.Adj_Close);
-	      }), 0])
-	      .range([0, height]);
-	self.getStockColor = d3.scaleOrdinal(d3.schemeCategory10)
-	      .domain(data.map((d) => d[0].Symbol));
-
-	const line = d3.line()
-	      .curve(d3.curveBasis)
-	      .x((d) => x(parseDate(d.Date)))
-	      .y((d) => y(d.Adj_Close));
-
-	chart.append("g")
-	    .attr("class", "x-axis axis")
-	    .attr("transform", `translate(0,${height})`)
-	    .call(d3.axisBottom(x));
-
-	chart.append("g")
-	    .attr("class", "y-axis axis")
-	    .call(d3.axisLeft(y));
-	
-	let node = chart.selectAll(".node")
-	    .data(data)
-	    .enter().append("g")
-	    .attr("class", "node");
-
-	node.append("path")
-	    .attr("class", "line")
-	    .attr("d", (d) => line(d))
-	    .style("stroke", (d) => self.getStockColor(d[0].Symbol))
-	    .style("fill", "none");
-
-	updateSymbolBoxColors();
-    };
-
-    this.initialize = function() {
-	draw();
-    }
-
-    this.addData = function(stockData) {
-	data.push(stockData);
-	draw();
-    };
-
-    this.removeData = function(symbol) {
-	const index = indexOfSymbol(symbol);
-	if (index > -1) {
-	    data.splice(index, 1);
-	    draw();
-	}
-    };
-
-    function indexOfSymbol(symbol) {
-	for (let i = 0; i < data.length; i++) {
-	    if (data[i][0].Symbol == symbol) {
-		return i;
-	    }
-	}
-	return -1;
-    }
-}
-
-/* MODAL DIALOG
  */
 
-function displayError(error) {
-    $("dialog-message").textContent = `Error: ${error}`;
-    $("modal-dialog").style.opacity = 1;
-    $("modal-dialog").style.pointerEvents = "auto";
-}
+var Graph = function () {
+				function Graph(element) {
+								_classCallCheck(this, Graph);
 
-function closeDialog() {
-    $("modal-dialog").style.opacity = 0;
-    $("modal-dialog").style.pointerEvents = "none";
+								var svg = d3.select(element).append("svg");
+								var margin = {
+												left: 50,
+												bottom: 30,
+												right: 50,
+												top: 30
+								};
+								svg.attr("id", "chart").attr("width", "100%").attr("height", "300px");
+								this.width = $("chart").clientWidth - margin.left - margin.right;
+								this.height = $("chart").clientHeight - margin.top - margin.bottom;
+
+								this.chart = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+				}
+
+				_createClass(Graph, [{
+								key: "update",
+								value: function update(stocks) {
+												d3.selectAll("svg > g > *").remove();
+
+												var parseDate = d3.timeParse("%Y-%m-%d");
+
+												var x = d3.scaleTime().domain([// stock data is 2D - finds min/max overall date
+												d3.min(stocks, function (stock) {
+																return d3.min(stock.history, function (d) {
+																				return parseDate(d.Date);
+																});
+												}), d3.max(stocks, function (stock) {
+																return d3.max(stock.history, function (d) {
+																				return parseDate(d.Date);
+																});
+												})]).range([0, this.width]);
+
+												var y = d3.scaleLinear() // see above - finds max overall value
+												.domain([d3.max(stocks, function (stock) {
+																return d3.max(stock.history, function (d) {
+																				return +d.Adj_Close;
+																});
+												}), 0]).range([0, this.height]);
+
+												var getStockColor = d3.scaleOrdinal(d3.schemeCategory10).domain(stocks.map(function (d) {
+																return d.symbol;
+												}));
+
+												var line = d3.line().curve(d3.curveBasis).x(function (d) {
+																return x(parseDate(d.Date));
+												}).y(function (d) {
+																return y(d.Adj_Close);
+												});
+
+												this.chart.append("g").attr("class", "x-axis axis").attr("transform", "translate(0," + this.height + ")").call(d3.axisBottom(x));
+
+												this.chart.append("g").attr("class", "y-axis axis").call(d3.axisLeft(y));
+
+												var node = this.chart.selectAll(".node").data(stocks).enter().append("g").attr("class", "node");
+
+												node.append("path").attr("class", "line").attr("d", function (d) {
+																return line(d.history);
+												}).style("stroke", function (d) {
+																return getStockColor(d.symbol);
+												}).style("fill", "none");
+								}
+				}]);
+
+				return Graph;
+}();
+
+var GraphContainer = function (_React$Component4) {
+				_inherits(GraphContainer, _React$Component4);
+
+				function GraphContainer(props) {
+								_classCallCheck(this, GraphContainer);
+
+								return _possibleConstructorReturn(this, (GraphContainer.__proto__ || Object.getPrototypeOf(GraphContainer)).call(this, props));
+				}
+
+				_createClass(GraphContainer, [{
+								key: "componentDidMount",
+								value: function componentDidMount() {
+												this.graph = new Graph(ReactDOM.findDOMNode(this));
+												this.graph.update(this.props.stocks);
+								}
+				}, {
+								key: "componentDidUpdate",
+								value: function componentDidUpdate() {
+												this.graph.update(this.props.stocks);
+								}
+				}, {
+								key: "render",
+								value: function render() {
+												return React.createElement("div", null);
+								}
+				}]);
+
+				return GraphContainer;
+}(React.Component);
+
+/* SETUP
+ */
+
+window.addEventListener("DOMContentLoaded", setup);
+
+function setup() {
+				ReactDOM.render(React.createElement(App, null), $("container"));
 }
 
 },{"react":176,"react-dom":25}],178:[function(require,module,exports){
