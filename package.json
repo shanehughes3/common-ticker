@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "bundle-js": "browserify src/browser.js -o public/bundle.js -t babelify",
-    "start": "nodemon server.js --exec babel-node"
+    "start-dev": "nodemon server.js --exec babel-node",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
