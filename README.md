@@ -3,7 +3,7 @@
 A single-page web app that synchronizes a stock chart between all connected
 clients.
 
-Created per specs at [FreeCodeCamp].
+Created per specs at [FreeCodeCamp], and currently hosted on [Heroku].
 
 ### Features
 
@@ -33,3 +33,4 @@ PARTICULAR PURPOSE. See the GNU General Public License for details.
 A copy of the GPLv2 can be found in the file COPYING.
 
 [FreeCodeCamp]: <https://www.freecodecamp.com/challenges/chart-the-stock-market>
+[Heroku]: <https://common-ticker.herokuapp.com/>

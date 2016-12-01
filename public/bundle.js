@@ -20336,7 +20336,9 @@ var WSConnection = function () {
 				}, {
 								key: "onError",
 								set: function set(errFunction) {
-												this.socket.onerror = errFunction;
+												this.socket.onerror = function () {
+																return errFunction("Error connecting to server - try refreshing the page");
+												};
 								}
 				}, {
 								key: "onMessage",
@@ -20394,9 +20396,7 @@ var App = function (_React$Component) {
 								_this.closeError = _this.closeError.bind(_this);
 
 								_this.connection = new WSConnection(_this.handleMessage);
-								_this.connection.onError = function () {
-												return _this.displayError("Error connecting to server - try refreshing the page");
-								};
+								_this.connection.onError = _this.displayError.bind(_this);
 								_this.connection.onMessage = _this.handleMessage.bind(_this);
 								_this.state = {
 												stockList: [],
@@ -20556,7 +20556,10 @@ var AddForm = function (_React$Component2) {
 
 												if (this.state.requestTimeout == false) {
 																this.props.handleClick(this.state.symbol);
-																this.setState({ requestTimeout: true });
+																this.setState({
+																				requestTimeout: true,
+																				symbol: ""
+																});
 																setTimeout(function () {
 																				return _this6.setState({ requestTimeout: false });
 																}, 2000);
@@ -20579,7 +20582,7 @@ var AddForm = function (_React$Component2) {
 																				"form",
 																				{ action: "javascript:void(0)" },
 																				React.createElement("input", { type: "text", id: "add-symbol-field",
-																								placeholder: "symbol", value: this.state.symbol,
+																								placeholder: "Symbol", value: this.state.symbol,
 																								onChange: this.handleChange }),
 																				React.createElement(
 																								"button",

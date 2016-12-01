@@ -15,7 +15,8 @@ class WSConnection {
     }
 
     set onError(errFunction) {
-	this.socket.onerror = errFunction;
+	this.socket.onerror = () =>
+	    errFunction("Error connecting to server - try refreshing the page");
     }
 
     set onMessage(msgFunction) {
@@ -57,7 +58,7 @@ class WSConnection {
         message = JSON.parse(message);
 	this.callback(message);
     }
-
+    
 }
 
 /* STOCK DATA API
@@ -88,8 +89,7 @@ class App extends React.Component {
 	this.closeError = this.closeError.bind(this);
 	
         this.connection = new WSConnection(this.handleMessage);
-	this.connection.onError = () => this.displayError(
-	    "Error connecting to server - try refreshing the page");
+	this.connection.onError = this.displayError.bind(this);
 	this.connection.onMessage = this.handleMessage.bind(this);
 	this.state = {
 	    stockList: [],
@@ -205,7 +205,10 @@ class AddForm extends React.Component {
     handleClick() {
 	if (this.state.requestTimeout == false) {
 	    this.props.handleClick(this.state.symbol);
-	    this.setState({ requestTimeout: true });
+	    this.setState({
+		requestTimeout: true,
+		symbol: ""
+	    });
 	    setTimeout(() => this.setState({ requestTimeout: false }), 2000);
 	}
     }
@@ -219,7 +222,7 @@ class AddForm extends React.Component {
             <div id="new-symbol-box">
                 <form action="javascript:void(0)">
                     <input type="text" id="add-symbol-field"
-			   placeholder="symbol" value={this.state.symbol}
+			   placeholder="Symbol" value={this.state.symbol}
 			   onChange={this.handleChange}/>
                     <button id="submit-new-button" onClick={this.handleClick}>
 			{(this.state.requestTimeout) ?
