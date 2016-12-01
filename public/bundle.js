@@ -20339,6 +20339,9 @@ var WSConnection = function () {
 												this.socket.onerror = function () {
 																return errFunction("Error connecting to server - try refreshing the page");
 												};
+												this.socket.onclose = function () {
+																return errFunction("Connection to server lost - try refreshing the page");
+												};
 								}
 				}, {
 								key: "onMessage",
@@ -20346,6 +20349,11 @@ var WSConnection = function () {
 												this.socket.onmessage = function (message) {
 																return msgFunction(message.data);
 												};
+								}
+				}, {
+								key: "ready",
+								get: function get() {
+												return this.socket.readyState === 1; // true on OPEN
 								}
 				}]);
 
@@ -20481,12 +20489,20 @@ var App = function (_React$Component) {
 				}, {
 								key: "handleAddFormSubmission",
 								value: function handleAddFormSubmission(symbol) {
-												this.connection.sendAddSymbol(symbol);
+												if (this.connection.ready) {
+																this.connection.sendAddSymbol(symbol);
+												} else {
+																this.displayError("Could not add " + symbol + " - connection lost");
+												}
 								}
 				}, {
 								key: "handleDeleteClick",
 								value: function handleDeleteClick(symbol) {
-												this.connection.sendDeleteSymbol(symbol);
+												if (this.connection.ready) {
+																this.connection.sendDeleteSymbol(symbol);
+												} else {
+																this.displayError("Could not delete " + symbol + " - connection lost");
+												}
 								}
 				}, {
 								key: "displayError",
@@ -20554,7 +20570,7 @@ var AddForm = function (_React$Component2) {
 								value: function handleClick() {
 												var _this6 = this;
 
-												if (this.state.requestTimeout == false) {
+												if (this.state.requestTimeout == false && this.state.symbol.length > 0) {
 																this.props.handleClick(this.state.symbol);
 																this.setState({
 																				requestTimeout: true,

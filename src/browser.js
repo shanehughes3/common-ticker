@@ -17,10 +17,16 @@ class WSConnection {
     set onError(errFunction) {
 	this.socket.onerror = () =>
 	    errFunction("Error connecting to server - try refreshing the page");
+	this.socket.onclose = () =>
+	    errFunction("Connection to server lost - try refreshing the page");
     }
 
     set onMessage(msgFunction) {
 	this.socket.onmessage = (message) => msgFunction(message.data);
+    }
+
+    get ready() {
+	return this.socket.readyState === 1; // true on OPEN
     }
 
     generateWSServerURL() {
@@ -153,11 +159,19 @@ class App extends React.Component {
     }
 
     handleAddFormSubmission(symbol) {
-	this.connection.sendAddSymbol(symbol);
+	if (this.connection.ready) {
+	    this.connection.sendAddSymbol(symbol);
+	} else {
+	    this.displayError(`Could not add ${symbol} - connection lost`);
+	}
     }
 
     handleDeleteClick(symbol) {
-	this.connection.sendDeleteSymbol(symbol);
+	if (this.connection.ready) {
+	    this.connection.sendDeleteSymbol(symbol);
+	} else {
+	    this.displayError(`Could not delete ${symbol} - connection lost`);
+	}
     }
 
     displayError(err) {
@@ -203,7 +217,8 @@ class AddForm extends React.Component {
 	}
     }
     handleClick() {
-	if (this.state.requestTimeout == false) {
+	if (this.state.requestTimeout == false &&
+	    this.state.symbol.length > 0) {
 	    this.props.handleClick(this.state.symbol);
 	    this.setState({
 		requestTimeout: true,
