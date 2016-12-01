@@ -1,33 +1,21 @@
-const url = require("url"),
-      fs = require("fs"),
-      methods = require("./methods"),
-      Scribe = require("express-scribe");
+const express = require("express"),
+      router = express.Router(),
+      api = require("../api");
 
-const logger = new Scribe({removeIPv4Prefix: true});
-
-exports.handleRequest = function(req, res) {
-    logger.req(req, res);
-    HTTPMethods[req.method](req, res);
-};
-
-const HTTPMethods = {
-    "GET": function(req, res) {
-	const endpoint = url.parse(req.url).pathname;
-	if (routes.hasOwnProperty(endpoint)) {
-	    routes[endpoint](req, res);
-	} else if (fs.existsSync("./public" + endpoint)) {
-	    methods.renderPublicFile(req, res);
-	} else {
-	    methods.render404(req, res);
-	}
-    },
-    "POST": function(req, res) {
-	methods.render404(req, res);
+router.get("/api", function(req, res) {
+    if (req.query.symbol) {
+	api.getCacheData(req.query.symbol, function(err, data) {
+	    if (err) {
+		res.json(err);
+	    } else if (data) {
+		res.json(data);
+	    } else {
+		res.json({error: "NoResults"});
+	    }
+	});
+    } else {
+	res.json({error: "InvalidRequest"});
     }
-};
+});
 
-const routes = {
-    "/": methods.renderIndex,
-    "/api": methods.api
-};
-    
+module.exports = router;

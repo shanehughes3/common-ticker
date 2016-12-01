@@ -11,12 +11,12 @@ Created per specs at [FreeCodeCamp], and currently hosted on [Heroku].
   along with a graph display of the stock's performance in the last year.
 - Users can add a stock symbol to the graph, which is reflected on all clients'
   windows.
-- Users can delete stocks from the graph, whether or not they were the one to
+- Users can delete stocks from the graph whether or not they were the one to
   add them.  This is also mirrored for all connected clients.
 
 ### Tech
 
-The Common Ticker uses a vanilla Node.js engine (i.e.: no Express). It connects
+The Common Ticker uses a Node.js/Express. It connects
 to the Yahoo! Finance API. Clients are updated via websocket.
 
 ### License
