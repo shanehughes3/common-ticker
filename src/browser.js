@@ -382,10 +382,6 @@ class Graph {
 			return d3.max(stock.history, (d) => +d.Adj_Close);
 		    }), 0])
 		    .range([0, this.height]);
-
-	const div = d3.select("body").append("div")
-		      .attr("class", "tooltip")
-		      .style("opacity", 0);
 	
 	const line = d3.line()
 		       .curve(d3.curveBasis)
@@ -419,6 +415,60 @@ class Graph {
 	    .attr("d", (d) => line(d.history))
 	    .style("stroke", (d) => colorFunc(d.symbol))
 	    .style("fill", "none");
+
+
+
+	let div = d3.select("#graph-container").append("div")
+		    .style("opacity", 0)
+		    .attr("pointer-events", "none")
+		    .attr("class", "tooltip");
+
+	this.chart.append("rect")
+	    .attr("class", "overlay")
+	    .attr("width", this.width + "px")
+	    .attr("height", this.height + "px")
+	    .on("mouseover", ()  => div.style("opacity", 1)
+				       .style("z-index", 10))
+	    .on("mouseout", () => div.style("opacity", 0)
+				     .style("z-index", -10))
+	    .on("mousemove", mousemove);
+
+	function mousemove() {
+	    const xDate = Graph.parseXDate(x.invert(d3.mouse(this)[0]));
+	    let stocksInfo = "";
+	    stocks.forEach((stock) => {
+		const valueDate = stock.history.find((elem) => {
+		    return elem.Date === xDate;
+		});
+		stocksInfo += 
+		    `<div className="tooltip-stock-info">
+			<span className="tootip-stock-name" 
+                            style="color: ${colorFunc(stock.symbol)}">
+			    ${stock.symbol}: 
+			</span>
+			${(valueDate) ? parseFloat(valueDate.Adj_Close, 10)
+                            .toFixed(2)
+                            : "market closed"}
+		    </div>`;
+	    });
+	    
+	    div.html(
+		`<div>
+		    <div className="tooltip-date">
+			${xDate}
+		    </div>
+		    ${stocksInfo}
+		</div>`
+	    )
+	       .style("left", (x(parseDate(xDate)) + 70) + "px")
+	       .style("top", (d3.mouse(this)[1] + 70) + "px");
+	}
+		 
+    }
+
+    static parseXDate(inDate) {
+	let date = new Date(inDate);
+	return date.toISOString().slice(0, 10);
     }
 
     getStartDate(timeSpan) {
@@ -450,7 +500,7 @@ class GraphContainer extends React.Component {
 			  this.props.timeSpan);
     }
     render() {
-	return <div></div>;
+	return <div id="graph-container"></div>;
     }
 }
 

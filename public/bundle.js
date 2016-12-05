@@ -20788,8 +20788,6 @@ var Graph = function () {
 																});
 												}), 0]).range([0, this.height]);
 
-												var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
-
 												var line = d3.line().curve(d3.curveBasis).x(function (d) {
 																return x(parseDate(d.Date));
 												}).y(function (d) {
@@ -20815,6 +20813,27 @@ var Graph = function () {
 												}).style("stroke", function (d) {
 																return colorFunc(d.symbol);
 												}).style("fill", "none");
+
+												var div = d3.select("#graph-container").append("div").style("opacity", 0).attr("pointer-events", "none").attr("class", "tooltip");
+
+												this.chart.append("rect").attr("class", "overlay").attr("width", this.width + "px").attr("height", this.height + "px").on("mouseover", function () {
+																return div.style("opacity", 1).style("z-index", 10);
+												}).on("mouseout", function () {
+																return div.style("opacity", 0).style("z-index", -10);
+												}).on("mousemove", mousemove);
+
+												function mousemove() {
+																var xDate = Graph.parseXDate(x.invert(d3.mouse(this)[0]));
+																var stocksInfo = "";
+																stocks.forEach(function (stock) {
+																				var valueDate = stock.history.find(function (elem) {
+																								return elem.Date === xDate;
+																				});
+																				stocksInfo += "<div className=\"tooltip-stock-info\">\n\t\t\t<span className=\"tootip-stock-name\" \n                            style=\"color: " + colorFunc(stock.symbol) + "\">\n\t\t\t    " + stock.symbol + ": \n\t\t\t</span>\n\t\t\t" + (valueDate ? parseFloat(valueDate.Adj_Close, 10).toFixed(2) : "market closed") + "\n\t\t    </div>";
+																});
+
+																div.html("<div>\n\t\t    <div className=\"tooltip-date\">\n\t\t\t" + xDate + "\n\t\t    </div>\n\t\t    " + stocksInfo + "\n\t\t</div>").style("left", x(parseDate(xDate)) + 70 + "px").style("top", d3.mouse(this)[1] + 70 + "px");
+												}
 								}
 				}, {
 								key: "getStartDate",
@@ -20839,6 +20858,12 @@ var Graph = function () {
 												};
 												span[timeSpan]();
 												return output.toISOString().slice(0, 10);
+								}
+				}], [{
+								key: "parseXDate",
+								value: function parseXDate(inDate) {
+												var date = new Date(inDate);
+												return date.toISOString().slice(0, 10);
 								}
 				}]);
 
@@ -20868,7 +20893,7 @@ var GraphContainer = function (_React$Component5) {
 				}, {
 								key: "render",
 								value: function render() {
-												return React.createElement("div", null);
+												return React.createElement("div", { id: "graph-container" });
 								}
 				}]);
 
