@@ -93,13 +93,15 @@ class App extends React.Component {
 	this.getStockColor = this.getStockColor.bind(this);
 	this.displayError = this.displayError.bind(this);
 	this.closeError = this.closeError.bind(this);
+	this.setTimeSpan = this.setTimeSpan.bind(this);
 	
         this.connection = new WSConnection(this.handleMessage);
 	this.connection.onError = this.displayError.bind(this);
 	this.connection.onMessage = this.handleMessage.bind(this);
 	this.state = {
 	    stockList: [],
-	    error: null
+	    error: null,
+	    timeSpan: "1y"
 	}
 	this.colorDomain = d3.scaleOrdinal(d3.schemeCategory10)
 			     .domain(this.state.stockList.map((d) => d.symbol));
@@ -186,6 +188,13 @@ class App extends React.Component {
 	return this.colorDomain(symbol);
     }
 
+    setTimeSpan(selection) {
+	this.setState({
+	    timeSpan: selection
+	});
+	console.log(selection, this.state.timeSpan); //////////////////
+    }
+
     render() {
 	const symbolBoxes = this.state.stockList.map((stock) =>
 	    <SymbolBox stock={stock} key={stock.symbol}
@@ -194,8 +203,11 @@ class App extends React.Component {
 	);
         return (
             <div>
+		<GraphSettings setSpan={this.setTimeSpan}
+			       current={this.state.timeSpan}/>
                 <GraphContainer stocks={this.state.stockList}
-				getStockColor={this.getStockColor}/>
+				getStockColor={this.getStockColor}
+				timeSpan={this.state.timeSpan}/>
                 <AddForm handleClick={this.handleAddFormSubmission} />
                 <div id="symbols-container">
                     {symbolBoxes}
@@ -204,6 +216,25 @@ class App extends React.Component {
             </div>
         )
     }
+}
+
+function GraphSettings(props) {
+    const options = ["1y", "6m", "3m", "1m", "1w"];
+    const buttons = options.map((option) => {
+	const className = (props.current == option) ?
+			  "graph-span-selected" : "graph-span-button";
+	return (
+	    <button onClick={() => props.setSpan(option)}
+		    className={className} key={option}>
+		{option}
+	    </button>
+	);
+    });
+    return (
+	<div className="graph-span-button-container">
+	    {buttons}
+	</div>
+    );
 }
 
 class AddForm extends React.Component {
@@ -333,34 +364,41 @@ class Graph {
 			       `translate(${margin.left},${margin.top})`);
     }
 
-    update(stocks, colorFunc) {
+    update(stocks, colorFunc, timeSpan) {
 	d3.selectAll("svg > g > *").remove();
 	
 	const parseDate = d3.timeParse("%Y-%m-%d");
+	const minDate = parseDate(this.getStartDate(timeSpan));
 
+	const today = new Date();
 	const x = d3.scaleTime()
-		    .domain([  // stock data is 2D - finds min/max overall date
-			d3.min(stocks, function(stock) {
-			    return d3.min(stock.history, (d) =>
-				parseDate(d.Date));
-			}),
-			d3.max(stocks, function(stock) {
-			    return d3.max(stock.history, (d) =>
-				parseDate(d.Date));
-			})
+		    .domain([minDate,
+			     parseDate(today.toISOString().slice(0, 10))
 		    ])
 		    .range([0, this.width]);
 	
-	const y = d3.scaleLinear() // see above - finds max overall value
+	const y = d3.scaleLinear() // finds max overall value of 2d array
 		    .domain([d3.max(stocks, function(stock) {
 			return d3.max(stock.history, (d) => +d.Adj_Close);
 		    }), 0])
 		    .range([0, this.height]);
+
+	const div = d3.select("body").append("div")
+		      .attr("class", "tooltip")
+		      .style("opacity", 0);
 	
 	const line = d3.line()
 		       .curve(d3.curveBasis)
 		       .x((d) => x(parseDate(d.Date)))
 		       .y((d) => y(d.Adj_Close));
+
+	let data = JSON.parse(JSON.stringify(stocks)); // deep copy
+	data = data.map((stock) => {
+	    stock.history = stock.history.filter((day) => {
+		return parseDate(day.Date) >= minDate;
+	    });
+	    return stock;
+	});
 
 	this.chart.append("g")
 	     .attr("class", "x-axis axis")
@@ -372,7 +410,7 @@ class Graph {
 	     .call(d3.axisLeft(y));
 	
 	let node = this.chart.selectAll(".node")
-			.data(stocks)
+			.data(data)
 			.enter().append("g")
 			.attr("class", "node");
 
@@ -381,8 +419,21 @@ class Graph {
 	    .attr("d", (d) => line(d.history))
 	    .style("stroke", (d) => colorFunc(d.symbol))
 	    .style("fill", "none");
-
     }
+
+    getStartDate(timeSpan) {
+	const output = new Date();
+	const span = {
+	    "1y": () => {output.setFullYear(output.getFullYear() - 1)},
+	    "6m": () => output.setMonth(output.getMonth() - 6),
+	    "3m": () => output.setMonth(output.getMonth() - 3),
+	    "1m": () => output.setMonth(output.getMonth() - 1),
+	    "1w": () => output.setDate(output.getDate() - 7)
+	};
+	(span[timeSpan])();
+	return output.toISOString().slice(0, 10);
+    }
+
 }
 
 class GraphContainer extends React.Component {
@@ -391,10 +442,12 @@ class GraphContainer extends React.Component {
     }
     componentDidMount() {
 	this.graph = new Graph(ReactDOM.findDOMNode(this));
-	this.graph.update(this.props.stocks, this.props.getStockColor);
+	this.graph.update(this.props.stocks, this.props.getStockColor,
+			  this.props.timeSpan);
     }
     componentDidUpdate() {
-	this.graph.update(this.props.stocks, this.props.getStockColor);
+	this.graph.update(this.props.stocks, this.props.getStockColor,
+			  this.props.timeSpan);
     }
     render() {
 	return <div></div>;

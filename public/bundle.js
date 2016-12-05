@@ -20402,13 +20402,15 @@ var App = function (_React$Component) {
 								_this.getStockColor = _this.getStockColor.bind(_this);
 								_this.displayError = _this.displayError.bind(_this);
 								_this.closeError = _this.closeError.bind(_this);
+								_this.setTimeSpan = _this.setTimeSpan.bind(_this);
 
 								_this.connection = new WSConnection(_this.handleMessage);
 								_this.connection.onError = _this.displayError.bind(_this);
 								_this.connection.onMessage = _this.handleMessage.bind(_this);
 								_this.state = {
 												stockList: [],
-												error: null
+												error: null,
+												timeSpan: "1y"
 								};
 								_this.colorDomain = d3.scaleOrdinal(d3.schemeCategory10).domain(_this.state.stockList.map(function (d) {
 												return d.symbol;
@@ -20520,6 +20522,14 @@ var App = function (_React$Component) {
 												return this.colorDomain(symbol);
 								}
 				}, {
+								key: "setTimeSpan",
+								value: function setTimeSpan(selection) {
+												this.setState({
+																timeSpan: selection
+												});
+												console.log(selection, this.state.timeSpan); //////////////////
+								}
+				}, {
 								key: "render",
 								value: function render() {
 												var _this4 = this;
@@ -20532,8 +20542,11 @@ var App = function (_React$Component) {
 												return React.createElement(
 																"div",
 																null,
+																React.createElement(GraphSettings, { setSpan: this.setTimeSpan,
+																				current: this.state.timeSpan }),
 																React.createElement(GraphContainer, { stocks: this.state.stockList,
-																				getStockColor: this.getStockColor }),
+																				getStockColor: this.getStockColor,
+																				timeSpan: this.state.timeSpan }),
 																React.createElement(AddForm, { handleClick: this.handleAddFormSubmission }),
 																React.createElement(
 																				"div",
@@ -20547,6 +20560,26 @@ var App = function (_React$Component) {
 
 				return App;
 }(React.Component);
+
+function GraphSettings(props) {
+				var options = ["1y", "6m", "3m", "1m", "1w"];
+				var buttons = options.map(function (option) {
+								var className = props.current == option ? "graph-span-selected" : "graph-span-button";
+								return React.createElement(
+												"button",
+												{ onClick: function onClick() {
+																				return props.setSpan(option);
+																},
+																className: className, key: option },
+												option
+								);
+				});
+				return React.createElement(
+								"div",
+								{ className: "graph-span-button-container" },
+								buttons
+				);
+}
 
 var AddForm = function (_React$Component2) {
 				_inherits(AddForm, _React$Component2);
@@ -20739,28 +20772,23 @@ var Graph = function () {
 
 				_createClass(Graph, [{
 								key: "update",
-								value: function update(stocks, colorFunc) {
+								value: function update(stocks, colorFunc, timeSpan) {
 												d3.selectAll("svg > g > *").remove();
 
 												var parseDate = d3.timeParse("%Y-%m-%d");
+												var minDate = parseDate(this.getStartDate(timeSpan));
 
-												var x = d3.scaleTime().domain([// stock data is 2D - finds min/max overall date
-												d3.min(stocks, function (stock) {
-																return d3.min(stock.history, function (d) {
-																				return parseDate(d.Date);
-																});
-												}), d3.max(stocks, function (stock) {
-																return d3.max(stock.history, function (d) {
-																				return parseDate(d.Date);
-																});
-												})]).range([0, this.width]);
+												var today = new Date();
+												var x = d3.scaleTime().domain([minDate, parseDate(today.toISOString().slice(0, 10))]).range([0, this.width]);
 
-												var y = d3.scaleLinear() // see above - finds max overall value
+												var y = d3.scaleLinear() // finds max overall value of 2d array
 												.domain([d3.max(stocks, function (stock) {
 																return d3.max(stock.history, function (d) {
 																				return +d.Adj_Close;
 																});
 												}), 0]).range([0, this.height]);
+
+												var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
 
 												var line = d3.line().curve(d3.curveBasis).x(function (d) {
 																return x(parseDate(d.Date));
@@ -20768,17 +20796,49 @@ var Graph = function () {
 																return y(d.Adj_Close);
 												});
 
+												var data = JSON.parse(JSON.stringify(stocks)); // deep copy
+												data = data.map(function (stock) {
+																stock.history = stock.history.filter(function (day) {
+																				return parseDate(day.Date) >= minDate;
+																});
+																return stock;
+												});
+
 												this.chart.append("g").attr("class", "x-axis axis").attr("transform", "translate(0," + this.height + ")").call(d3.axisBottom(x));
 
 												this.chart.append("g").attr("class", "y-axis axis").call(d3.axisLeft(y));
 
-												var node = this.chart.selectAll(".node").data(stocks).enter().append("g").attr("class", "node");
+												var node = this.chart.selectAll(".node").data(data).enter().append("g").attr("class", "node");
 
 												node.append("path").attr("class", "line").attr("d", function (d) {
 																return line(d.history);
 												}).style("stroke", function (d) {
 																return colorFunc(d.symbol);
 												}).style("fill", "none");
+								}
+				}, {
+								key: "getStartDate",
+								value: function getStartDate(timeSpan) {
+												var output = new Date();
+												var span = {
+																"1y": function y() {
+																				output.setFullYear(output.getFullYear() - 1);
+																},
+																"6m": function m() {
+																				return output.setMonth(output.getMonth() - 6);
+																},
+																"3m": function m() {
+																				return output.setMonth(output.getMonth() - 3);
+																},
+																"1m": function m() {
+																				return output.setMonth(output.getMonth() - 1);
+																},
+																"1w": function w() {
+																				return output.setDate(output.getDate() - 7);
+																}
+												};
+												span[timeSpan]();
+												return output.toISOString().slice(0, 10);
 								}
 				}]);
 
@@ -20798,12 +20858,12 @@ var GraphContainer = function (_React$Component5) {
 								key: "componentDidMount",
 								value: function componentDidMount() {
 												this.graph = new Graph(ReactDOM.findDOMNode(this));
-												this.graph.update(this.props.stocks, this.props.getStockColor);
+												this.graph.update(this.props.stocks, this.props.getStockColor, this.props.timeSpan);
 								}
 				}, {
 								key: "componentDidUpdate",
 								value: function componentDidUpdate() {
-												this.graph.update(this.props.stocks, this.props.getStockColor);
+												this.graph.update(this.props.stocks, this.props.getStockColor, this.props.timeSpan);
 								}
 				}, {
 								key: "render",
